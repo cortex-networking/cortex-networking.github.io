@@ -105,7 +105,12 @@ export class SongMode {
         }), tempoLabel),
       o.mode === 'play' || o.mode === 'tap' ? toggle('Metronome', o.metronome, (v) => set('metronome', v)) : null,
     ];
-    ui.foot(h('div', { class: 'controls' }, ...controls.filter(Boolean)), extra || null);
+    const [first, mode, ...more] = controls.filter(Boolean);
+    const wide = window.matchMedia('(min-width: 861px)').matches;
+    if (this._optsOpen === undefined) this._optsOpen = wide;
+    const details = h('details', { class: 'more', open: this._optsOpen ? true : null, ontoggle: (e) => { this._optsOpen = e.target.open; } },
+      h('summary', {}, 'Options'), h('div', { class: 'controls' }, ...more));
+    ui.foot(h('div', { class: 'controls' }, first, mode, more.length ? details : null), extra || null);
   }
 
   play() {

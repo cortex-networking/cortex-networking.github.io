@@ -507,3 +507,29 @@ dialog::backdrop { background: rgba(20, 24, 22, 0.45); }
   .profile { max-width: 44px; padding-right: 3px; }
   .profile-name { display: none; }
 }
+
+/* ---------- compact layouts ---------- */
+details.more { display: contents; }
+details.more > summary { display: none; }
+@media (max-width: 860px) {
+  details.more { display: block; width: 100%; }
+  details.more > summary {
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--chalk-2);
+    font-size: 14px; list-style: none; padding: 4px 0;
+  }
+  details.more > summary::-webkit-details-marker { display: none; }
+  details.more > summary::before { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(-45deg); transition: transform 0.15s; }
+  details.more[open] > summary::before { transform: rotate(45deg); }
+  details.more > .controls { margin-top: 8px; }
+  .board { overflow-y: auto; grid-template-rows: auto auto minmax(190px, 1fr) auto; }
+  .score { overflow: hidden; }
+  .prompt { font-size: 16.5px; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+  .prompt.expanded { display: block; -webkit-line-clamp: unset; }
+  .seg { max-width: 100%; overflow-x: auto; }
+}
+@media (max-width: 480px) {
+  .brand span { display: none; }
+  .bar { gap: 8px 8px; }
+  .device { max-width: 150px; padding: 6px 10px 6px 9px; }
+  .tabs button { padding: 6px 4px; font-size: 14px; }
+}

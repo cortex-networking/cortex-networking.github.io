@@ -22,7 +22,10 @@ class UI {
     this.toastEl = $('#toast');
   }
   head({ kicker = '', title = '' }) { this.kicker.textContent = kicker; this.title.textContent = title; }
-  prompt(text = '') { this.promptEl.textContent = text; }
+  prompt(text = '') {
+    this.promptEl.textContent = text;
+    this.promptEl.classList.remove('expanded');
+  }
   status(text = '') { this.statusEl.textContent = text; }
   pips(n, i) {
     this.pipsEl.textContent = '';
@@ -153,6 +156,7 @@ class App {
     $('#profile').addEventListener('click', () => this.openProfiles());
     document.querySelectorAll('.tabs [data-tab]').forEach((b) => b.addEventListener('click', () => this.setTab(b.dataset.tab)));
     $('#list-toggle').addEventListener('click', () => document.body.classList.toggle('list-open'));
+    $('#prompt').addEventListener('click', (e) => e.currentTarget.classList.toggle('expanded'));
     $('#list-scrim').addEventListener('click', () => document.body.classList.remove('list-open'));
     window.addEventListener('hashchange', () => this.route());
     document.addEventListener('keydown', (e) => {

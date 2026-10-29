@@ -329,10 +329,14 @@ export class Staff {
 
   _dynamics(score, ppb) {
     const sp = this.sp;
-    for (const m of score.marks || []) {
+    const marks = score.marks || [];
+    const rh = new Set(marks.filter((m) => m.hand === 'R').map((m) => `${m.t}|${m.dyn}`));
+    for (const m of marks) {
+      // one mark between the staves serves both hands, as in piano music
+      if (m.hand === 'L' && this.staves === 'grand' && rh.has(`${m.t}|${m.dyn}`)) continue;
       const clef = this.clefFor({ hand: m.hand, midi: 60 });
       const top = clef === 'treble' ? this.tTop : this.bTop;
-      const y = top + 4 * sp + (clef === 'treble' ? (this.staves === 'grand' ? 2.6 : 3.0) : 3.4) * sp;
+      const y = top + 4 * sp + (clef === 'treble' ? (this.staves === 'grand' ? 2.6 : 3.0) : 4.6) * sp;
       const glyph = GL.dyn[m.dyn];
       if (glyph) this._glyph(this.gScroll, glyph, m.t * ppb - 0.3 * sp, y, 4 * sp, 'glyph dyn');
     }

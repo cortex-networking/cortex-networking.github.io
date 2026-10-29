@@ -1,8 +1,16 @@
 // Course, song and game catalog: one place that joins the content files.
 import { SONGS as OLD_SONGS, GAMES as BASE_GAMES } from './library.js';
 import { CHAPTERS, LESSONS } from './curriculum.js';
+import { SONGS_ROCK } from './songs-rock.js';
 
-let songs = OLD_SONGS.map((s) => ({ tags: ['starter'], style: 'folk', ...s }));
+/** Later collections replace earlier entries with the same id (they carry chords, tags and blurbs). */
+function mergeSongs(...lists) {
+  const byId = new Map();
+  for (const list of lists) for (const s of list) byId.set(s.id, { ...(byId.get(s.id) || {}), ...s });
+  return [...byId.values()];
+}
+
+let songs = mergeSongs(OLD_SONGS.map((s) => ({ tags: ['starter'], style: 'folk', ...s })), SONGS_ROCK);
 let chapters = CHAPTERS;
 let lessons = [];
 let games = [...BASE_GAMES];
