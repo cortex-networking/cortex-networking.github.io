@@ -10,11 +10,13 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preload" href="fonts/notation-subset.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="css/games.css">
+  <link rel="stylesheet" href="css/studio.css">
   <script type="module" src="js/app.js"></script>
 </head>
-<body data-tab="lessons">
+<body data-tab="learn">
   <header class="bar">
-    <a class="brand" href="#/lessons" aria-label="Middle C home">
+    <a class="brand" href="#/learn" aria-label="Middle C home">
       <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
         <line x1="3" y1="16" x2="29" y2="16" />
         <ellipse cx="16" cy="16" rx="8.2" ry="5.6" transform="rotate(-20 16 16)" />
@@ -22,12 +24,16 @@
       <span>Middle C</span>
     </a>
     <nav class="tabs" role="tablist" aria-label="Sections">
-      <button role="tab" data-tab="lessons" aria-selected="true">Lessons</button>
+      <button role="tab" data-tab="learn" aria-selected="true">Learn</button>
       <button role="tab" data-tab="songs" aria-selected="false">Songs</button>
       <button role="tab" data-tab="games" aria-selected="false">Games</button>
+      <button role="tab" data-tab="studio" aria-selected="false" hidden>Studio</button>
       <button role="tab" data-tab="free" aria-selected="false">Free play</button>
     </nav>
     <div class="bar-end">
+      <button class="profile" id="profile" type="button">
+        <span class="avatar" aria-hidden="true"></span><span class="profile-name"></span>
+      </button>
       <button class="device" id="device" type="button" data-state="idle">
         <span class="dot" aria-hidden="true"></span><span class="device-label">Connect keyboard</span>
       </button>
@@ -68,6 +74,7 @@
   <footer class="piano" id="piano" aria-label="Piano keyboard"></footer>
 
   <dialog id="settings" aria-label="Settings"></dialog>
+  <dialog id="profiles" aria-label="Learners"></dialog>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <noscript><p class="noscript">Middle C needs JavaScript to run.</p></noscript>
 </body>

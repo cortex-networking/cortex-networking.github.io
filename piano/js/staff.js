@@ -7,6 +7,7 @@ const GL = {
   dot: '', flag: { '0.5u': '', '0.5d': '', '0.25u': '', '0.25d': '' },
   acc: { '-1': '', '0': '', '1': '' },
   rest: { 4: '', 2: '', 1: '', 0.5: '', 0.25: '' },
+  dyn: { p: '\uE520', f: '\uE522', ppp: '\uE52A', pp: '\uE52B', mp: '\uE52C', mf: '\uE52D', ff: '\uE52F', fff: '\uE530' },
 };
 const ACC_W = { '-1': 0.904, '0': 0.672, '1': 0.996 };
 const STEP = { trebleTop: 38, trebleMid: 34, trebleBot: 30, bassTop: 26, bassMid: 22, bassBot: 18 };
@@ -177,16 +178,28 @@ export class Staff {
       if (!groups.has(k)) groups.set(k, { t: e.t, d: e.d, hand: e.hand, clef, rest: !!e.rest, notes: [] });
       groups.get(k).notes.push(e);
     }
+    const beamOf = this._beams([...groups.values()], score, ppb);
+    const upOf = new Map();
     for (const g of groups.values()) {
       const x = g.t * ppb;
       if (g.rest) { this._rest(this.gScroll, x, g.d, g.clef); continue; }
       const dim = this.scoreOpts.dimHands && this.scoreOpts.dimHands.includes(g.hand);
-      const res = this._chord(this.gScroll, g.notes, x, g.d, g.clef, { finger: !this.scoreOpts.hideFingers, cls: dim ? 'other' : '' });
+      const b = beamOf.get(g);
+      const res = this._chord(this.gScroll, g.notes, x, g.d, g.clef, {
+        finger: !this.scoreOpts.hideFingers, cls: dim ? 'other' : '',
+        ...(b ? { up: b.up, stemEnd: b.yAt(b.stemX(g)), beamed: true } : {}),
+      });
       if (res.hasAcc) hasAcc.add(g.t.toFixed(4));
       res.g.dataset.t = g.t;
       this.chordEls.push({ t: g.t, hand: g.hand, g: res.g, notes: g.notes });
-      res.noteGroups.forEach((ng, i) => this.noteEls.set(g.notes[i].i, ng));
+      res.noteGroups.forEach((ng, i) => {
+        this.noteEls.set(g.notes[i].i, ng);
+        upOf.set(g.notes[i].i, { up: baseDur(g.d) < 4 ? res.up : null, clef: g.clef, headW: res.headW });
+      });
     }
+    for (const b of new Set(beamOf.values())) this._drawBeam(b);
+    this._ties(score, ppb, upOf);
+    this._dynamics(score, ppb);
     // barlines
     const yTop = this.staves === 'bass' ? this.bTop : this.tTop;
     const yBot = (this.staves === 'treble' ? this.tTop : this.bTop) + 4 * sp;
@@ -198,6 +211,131 @@ export class Staff {
     if (!this.scoreOpts.noEnd) el('line', { class: 'barline', x1: xe - 0.9 * sp, x2: xe - 0.9 * sp, y1: yTop, y2: yBot, 'stroke-width': Math.max(1, 0.16 * sp) }, this.gScroll);
     if (!this.scoreOpts.noEnd) el('rect', { class: 'bar-end', x: xe - 0.5 * sp, y: yTop, width: 0.5 * sp, height: yBot - yTop }, this.gScroll);
     this.setBeat(this.beat);
+  }
+
+  /** Find beam groups (eighths/sixteenths within a beat) and their beam lines. */
+  _beams(groups, score, ppb) {
+    const out = new Map();
+    const time = score.time || [4, 4];
+    const unit = time[1] === 8 ? 1.5 : 1;
+    const bars = score.barlines || [];
+    const bpb = score.bpb || 4;
+    const barStart = (t) => {
+      let s = bars.length ? bars[0] - bpb : 0;
+      for (const b of bars) { if (b <= t + 1e-6) s = b; else break; }
+      return s;
+    };
+    const streams = new Map();
+    for (const g of [...groups].sort((a, b) => a.t - b.t)) {
+      if (g.rest) continue;
+      const k = `${g.hand}|${g.clef}`;
+      if (!streams.has(k)) streams.set(k, []);
+      streams.get(k).push(g);
+    }
+    for (const list of streams.values()) {
+      let run = [];
+      const flush = () => { if (run.length > 1) this._beamLine(run, ppb, out); run = []; };
+      for (const g of list) {
+        if (baseDur(g.d) > 0.5) { flush(); continue; }
+        const prev = run[run.length - 1];
+        const bs = barStart(g.t);
+        const unitIdx = Math.floor((g.t - bs + 1e-6) / unit);
+        if (prev && (Math.abs(prev.t + prev.d - g.t) > 1e-6 || prev._bar !== bs || prev._unit !== unitIdx)) flush();
+        g._bar = bs; g._unit = unitIdx;
+        run.push(g);
+      }
+      flush();
+    }
+    return out;
+  }
+
+  _beamLine(run, ppb, out) {
+    const sp = this.sp, headW = 1.18 * sp;
+    const clef = run[0].clef;
+    const mid = clef === 'treble' ? STEP.trebleMid : STEP.bassMid;
+    const info = run.map((g) => {
+      const steps = g.notes.map((n) => spell(n.midi, this.key, n.prefer).step);
+      return { g, lo: Math.min(...steps), hi: Math.max(...steps) };
+    });
+    const all = info.flatMap((i) => [i.lo, i.hi]);
+    const far = all.reduce((a, s) => (Math.abs(s - mid) > Math.abs(a - mid) ? s : a), all[0]);
+    const up = far < mid || (far === mid && all.reduce((a, b) => a + b, 0) / all.length < mid);
+    const stemX = (g) => (up ? g.t * ppb + headW - 0.06 * sp : g.t * ppb + 0.06 * sp);
+    const tip = (i) => (up ? this.y(i.hi, clef) - 3.5 * sp : this.y(i.lo, clef) + 3.5 * sp);
+    const x1 = stemX(run[0]), x2 = stemX(run[run.length - 1]);
+    const y1 = tip(info[0]);
+    const dy = Math.max(-sp, Math.min(sp, tip(info[info.length - 1]) - y1));
+    const slope = x2 > x1 ? dy / (x2 - x1) : 0;
+    let shift = 0;
+    for (const i of info) {
+      const x = stemX(i.g);
+      const yLine = y1 + slope * (x - x1);
+      const limit = up ? this.y(i.hi, clef) - 2.8 * sp : this.y(i.lo, clef) + 2.8 * sp;
+      const over = up ? yLine - limit : limit - yLine;
+      if (over > shift) shift = over;
+    }
+    const base = y1 + (up ? -shift : shift);
+    const beam = { up, run, stemX, yAt: (x) => base + slope * (x - x1), x1, x2 };
+    run.forEach((g) => out.set(g, beam));
+  }
+
+  _drawBeam(b) {
+    const sp = this.sp, th = 0.5 * sp, gap = 0.75 * sp;
+    const dir = b.up ? 1 : -1; // beams grow toward the noteheads
+    const dim = this.scoreOpts.dimHands && this.scoreOpts.dimHands.includes(b.run[0].hand);
+    const g = el('g', { class: `beam${dim ? ' other' : ''}` }, this.gScroll);
+    const seg = (xa, xb, level) => {
+      const off = level * gap * dir;
+      const ya = b.yAt(xa) + off, yb = b.yAt(xb) + off;
+      el('polygon', { points: `${xa},${ya} ${xb},${yb} ${xb},${yb + th * dir} ${xa},${ya + th * dir}` }, g);
+    };
+    const w = Math.max(1, 0.12 * sp) / 2;
+    seg(b.x1 - w, b.x2 + w, 0);
+    const run = b.run;
+    for (let i = 0; i < run.length; i++) {
+      if (baseDur(run[i].d) > 0.25) continue;
+      const x = b.stemX(run[i]);
+      const next = run[i + 1], prev = run[i - 1];
+      if (next && baseDur(next.d) <= 0.25) seg(x - w, b.stemX(next) + w, 1);
+      else if (!(prev && baseDur(prev.d) <= 0.25)) {
+        if (prev) seg(x - 1.1 * sp, x + w, 1); else seg(x - w, x + 1.1 * sp, 1);
+      }
+    }
+  }
+
+  _ties(score, ppb, upOf) {
+    const sp = this.sp;
+    for (const e of score.events) {
+      if (!e.tieTo) continue;
+      const a = upOf.get(e.i);
+      const ng = this.noteEls.get(e.i);
+      if (!a || !ng || !upOf.get(e.tieTo.i)) continue;
+      const s = spell(e.midi, this.key, e.prefer);
+      const y = this.y(s.step, a.clef);
+      const mid = a.clef === 'treble' ? STEP.trebleMid : STEP.bassMid;
+      const below = a.up === null ? s.step < mid : a.up;
+      const dir = below ? 1 : -1;
+      const xs = e.t * ppb + a.headW + 0.12 * sp, xe = e.tieTo.t * ppb - 0.12 * sp;
+      const ys = y + dir * 0.55 * sp;
+      const len = Math.max(sp, xe - xs);
+      const hgt = dir * Math.min(0.95 * sp, 0.3 * sp + 0.035 * len);
+      const mx = (xs + xe) / 2;
+      el('path', {
+        class: 'tie',
+        d: `M${xs},${ys} Q${mx},${ys + hgt * 2} ${xe},${ys} Q${mx},${ys + (hgt - dir * 0.24 * sp) * 2} ${xs},${ys} Z`,
+      }, ng);
+    }
+  }
+
+  _dynamics(score, ppb) {
+    const sp = this.sp;
+    for (const m of score.marks || []) {
+      const clef = this.clefFor({ hand: m.hand, midi: 60 });
+      const top = clef === 'treble' ? this.tTop : this.bTop;
+      const y = top + 4 * sp + (clef === 'treble' ? (this.staves === 'grand' ? 2.6 : 3.0) : 3.4) * sp;
+      const glyph = GL.dyn[m.dyn];
+      if (glyph) this._glyph(this.gScroll, glyph, m.t * ppb - 0.3 * sp, y, 4 * sp, 'glyph dyn');
+    }
   }
 
   /** Add note events to the existing scroll layer (used by games). Returns chord groups. */
@@ -290,7 +428,7 @@ export class Staff {
     const steps = order.map((o) => o.s.step);
     const avg = steps.reduce((a, b) => a + b, 0) / steps.length;
     const far = Math.abs(steps[0] - mid) > Math.abs(steps[steps.length - 1] - mid) ? steps[0] : steps[steps.length - 1];
-    const up = steps.length > 1 ? far < mid : avg < mid;
+    const up = opts.up ?? (steps.length > 1 ? far < mid : avg < mid);
     // seconds displacement
     const disp = new Array(order.length).fill(0);
     if (up) { for (let i = 1; i < order.length; i++) if (steps[i] - steps[i - 1] === 1 && !disp[i - 1]) disp[i] = 1; }
@@ -337,14 +475,15 @@ export class Staff {
       let y1, y2;
       if (up) { y1 = yLo - 0.168 * sp; y2 = Math.min(yHi - 3.5 * sp, yMid); }
       else { y1 = yHi + 0.168 * sp; y2 = Math.max(yLo + 3.5 * sp, yMid); }
+      if (opts.stemEnd !== undefined) y2 = opts.stemEnd;
       el('line', { class: 'stem', x1: sx, x2: sx, y1, y2, 'stroke-width': Math.max(1, 0.12 * sp) }, g);
-      if (base < 1) this._glyph(g, GL.flag[`${base}${up ? 'u' : 'd'}`], sx - 0.06 * sp, y2, fs, 'glyph flag');
+      if (base < 1 && !opts.beamed) this._glyph(g, GL.flag[`${base}${up ? 'u' : 'd'}`], sx - 0.06 * sp, y2, fs, 'glyph flag');
       g.dataset.stem = up ? 'up' : 'down';
       this._fingers(g, order, x, headW, clef, up, y2);
     } else {
       this._fingers(g, order, x, headW, clef, null, null);
     }
-    return { g, noteGroups, hasAcc };
+    return { g, noteGroups, hasAcc, up, headW };
   }
 
   _fingers(g, order, x, headW, clef, up, stemEnd) {

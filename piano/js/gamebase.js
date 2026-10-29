@@ -39,6 +39,7 @@ export class GameBase {
 
   over(score, detail) {
     const { ui, store } = this.app;
+    if (this.app.coach?.current) this.app.coach.end(this.app.coach.current);
     this.playing = false;
     const prev = store.game(this.game.id, this.level) || 0;
     store.saveGame(this.game.id, this.level, score);
