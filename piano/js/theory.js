@@ -1,0 +1,174 @@
+// Music theory helpers: spelling, staff positions, parsing, chord names.
+
+export const LETTERS = 'CDEFGAB';
+const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
+const SHARP_ORDER = [3, 0, 4, 1, 5, 2, 6]; // F C G D A E B (letter indices)
+const FLAT_ORDER = [6, 2, 5, 1, 4, 0, 3];  // B E A D G C F
+
+export const KEY_SIGS = { C: 0, G: 1, D: 2, A: 3, E: 4, F: -1, Bb: -2, Eb: -3, Am: 0, Em: 1, Dm: -1 };
+
+export const DUR = { w: 4, h: 2, q: 1, e: 0.5, s: 0.25 };
+
+export const NAMES_SHARP = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+export const NAMES_FLAT = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'G♭', 'G', 'A♭', 'A', 'B♭', 'B'];
+const ROOT_NAMES = ['C', 'D♭', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B'];
+
+export const pc = (m) => ((m % 12) + 12) % 12;
+export const isBlack = (m) => [1, 3, 6, 8, 10].includes(pc(m));
+export const freq = (m) => 440 * 2 ** ((m - 69) / 12);
+
+/** letterIndex -> alteration for a key signature */
+export function keySigMap(key = 'C') {
+  const n = KEY_SIGS[key] ?? 0;
+  const map = {};
+  if (n > 0) SHARP_ORDER.slice(0, n).forEach((l) => (map[l] = 1));
+  if (n < 0) FLAT_ORDER.slice(0, -n).forEach((l) => (map[l] = -1));
+  return map;
+}
+
+/**
+ * Spell a MIDI note in a key.
+ * Returns { letter, alter, octave, step, name, accidental }
+ * step is a diatonic index (C4 = 28), accidental is the sign to draw (null, 1, -1, 0 for natural).
+ */
+export function spell(midi, key = 'C', prefer) {
+  const p = pc(midi);
+  const sig = keySigMap(key);
+  const flats = prefer ? prefer === 'flat' : (KEY_SIGS[key] ?? 0) < 0;
+  let letter, alter;
+  for (const [l, a] of Object.entries(sig)) {
+    if (pc(LETTER_PC[l] + a) === p) { letter = +l; alter = a; }
+  }
+  if (letter === undefined) {
+    const nat = LETTER_PC.indexOf(p);
+    if (nat >= 0) { letter = nat; alter = 0; }
+    else if (flats) { letter = LETTER_PC.indexOf(pc(p + 1)); alter = -1; }
+    else { letter = LETTER_PC.indexOf(pc(p - 1)); alter = 1; }
+  }
+  const octave = Math.floor((midi - alter) / 12) - 1;
+  const sigAlter = sig[letter] || 0;
+  return {
+    letter, alter, octave,
+    step: octave * 7 + letter,
+    name: LETTERS[letter] + (alter > 0 ? '♯' : alter < 0 ? '♭' : ''),
+    accidental: alter === sigAlter ? null : alter,
+  };
+}
+
+export function noteName(midi, { octave = false, prefer } = {}) {
+  const s = spell(midi, 'C', prefer);
+  return s.name + (octave ? s.octave : '');
+}
+
+export function parsePitch(str) {
+  const m = /^([A-G])([#b♯♭]?)(-?\d)$/.exec(str);
+  if (!m) throw new Error(`Bad pitch "${str}"`);
+  const alter = m[2] === '#' || m[2] === '♯' ? 1 : m[2] === 'b' || m[2] === '♭' ? -1 : 0;
+  return (+m[3] + 1) * 12 + LETTER_PC[LETTERS.indexOf(m[1])] + alter;
+}
+
+const TOKEN = /^(r|[A-G][#b]?-?\d(?:\+[A-G][#b]?-?\d)*)([whqes])?(\.)?(?::(\d+))?$/;
+
+/**
+ * Parse a voice string into events.
+ *   "E4q D4 C4 D4 | E4 E4 E4h"  — durations w h q e s (+ '.'), carried forward
+ *   "C3+E3+G3h"                  — chord
+ *   "rq"                         — rest
+ *   "E4q:3"                      — fingering (chords: one digit per note, low to high)
+ * Returns { events, length, bars } where bars are beat positions of '|' marks.
+ */
+export function parseVoice(str, hand = 'R', startBeat = 0) {
+  const events = [];
+  const bars = [];
+  let t = startBeat;
+  let dur = 1;
+  for (const tok of str.trim().split(/\s+/)) {
+    if (!tok) continue;
+    if (tok === '|') { bars.push(t); continue; }
+    const m = TOKEN.exec(tok);
+    if (!m) throw new Error(`Bad token "${tok}"`);
+    if (m[2]) dur = DUR[m[2]] * (m[3] ? 1.5 : 1);
+    else if (m[3]) dur = dur * 1.5;
+    if (m[1] === 'r') {
+      events.push({ t, d: dur, rest: true, hand });
+    } else {
+      const pitches = m[1].split('+').map(parsePitch).sort((a, b) => a - b);
+      const fingers = m[4] ? m[4].split('').map(Number) : [];
+      pitches.forEach((midi, i) => events.push({ t, d: dur, midi, hand, finger: fingers[i] }));
+    }
+    t += dur;
+  }
+  return { events, length: t, bars };
+}
+
+/** Build a full score object from a song/exercise definition. */
+export function buildScore(def) {
+  const bpb = def.time ? (def.time[0] * 4) / def.time[1] : 4;
+  const pickup = def.pickup || 0;
+  const rh = def.rh ? parseVoice(def.rh, 'R') : { events: [], length: 0, bars: [] };
+  const lh = def.lh ? parseVoice(def.lh, 'L') : { events: [], length: 0, bars: [] };
+  const events = [...rh.events, ...lh.events].sort((a, b) => a.t - b.t || (a.midi ?? 0) - (b.midi ?? 0));
+  const length = Math.max(rh.length, lh.length);
+  const barlines = [];
+  for (let b = pickup > 0 ? pickup : bpb; b < length - 1e-6; b += bpb) barlines.push(b);
+  events.forEach((e, i) => (e.i = i));
+  return {
+    title: def.title, key: def.key || 'C', time: def.time || [4, 4], bpb, pickup,
+    tempo: def.tempo || 90, events, notes: events.filter((e) => !e.rest), length, barlines,
+    hands: { R: rh.events.some((e) => !e.rest), L: lh.events.some((e) => !e.rest) },
+    _bars: { R: rh.bars, L: lh.bars },
+  };
+}
+
+/** Group note events (optionally filtered) by start time. */
+export function groupSteps(notes) {
+  const steps = [];
+  for (const e of notes) {
+    const last = steps[steps.length - 1];
+    if (last && Math.abs(last.t - e.t) < 1e-6) last.notes.push(e);
+    else steps.push({ t: e.t, notes: [e] });
+  }
+  return steps;
+}
+
+// ---------- chord naming ----------
+const CHORDS = [
+  ['', 'major', [0, 4, 7]], ['m', 'minor', [0, 3, 7]], ['dim', 'diminished', [0, 3, 6]],
+  ['aug', 'augmented', [0, 4, 8]], ['sus2', 'sus2', [0, 2, 7]], ['sus4', 'sus4', [0, 5, 7]],
+  ['7', 'dominant 7th', [0, 4, 7, 10]], ['7', 'dominant 7th', [0, 4, 10]],
+  ['maj7', 'major 7th', [0, 4, 7, 11]], ['m7', 'minor 7th', [0, 3, 7, 10]],
+  ['m7♭5', 'half-diminished', [0, 3, 6, 10]], ['dim7', 'diminished 7th', [0, 3, 6, 9]],
+  ['6', 'major 6th', [0, 4, 7, 9]], ['m6', 'minor 6th', [0, 3, 7, 9]],
+  ['add9', 'add 9', [0, 2, 4, 7]], ['5', 'power chord', [0, 7]],
+];
+const INTERVALS = ['unison', 'minor 2nd', 'major 2nd', 'minor 3rd', 'major 3rd', 'perfect 4th',
+  'tritone', 'perfect 5th', 'minor 6th', 'major 6th', 'minor 7th', 'major 7th', 'octave'];
+
+export function describeNotes(midis) {
+  const sorted = [...midis].sort((a, b) => a - b);
+  if (sorted.length === 0) return null;
+  if (sorted.length === 1) return { title: noteName(sorted[0], { octave: true }), sub: 'single note' };
+  const pcs = [...new Set(sorted.map(pc))];
+  if (pcs.length === 1) return { title: noteName(sorted[0]), sub: 'octaves' };
+  if (sorted.length === 2) {
+    const iv = sorted[1] - sorted[0];
+    return { title: iv > 12 ? `${INTERVALS[iv % 12]} + octave` : INTERVALS[iv], sub: 'interval' };
+  }
+  const bass = pc(sorted[0]);
+  for (const root of [bass, ...pcs.filter((p) => p !== bass)]) {
+    const set = pcs.map((p) => pc(p - root)).sort((a, b) => a - b);
+    for (const [sym, long, tpl] of CHORDS) {
+      if (tpl.length === set.length && tpl.every((v, i) => v === set[i])) {
+        const slash = root !== bass ? `/${ROOT_NAMES[bass]}` : '';
+        return { title: `${ROOT_NAMES[root]}${sym}${slash}`, sub: long + (slash ? ` over ${ROOT_NAMES[bass]}` : '') };
+      }
+    }
+  }
+  return { title: pcs.map((p) => ROOT_NAMES[p]).join(' '), sub: `${sorted.length} notes` };
+}
+
+/** Prefer flat spellings when the chord root is a "flat" name. */
+export function preferFor(midis) {
+  const d = describeNotes(midis);
+  return d && /♭/.test(d.title.split('/')[0]) ? 'flat' : 'sharp';
+}
