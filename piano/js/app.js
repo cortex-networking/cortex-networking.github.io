@@ -197,7 +197,7 @@ class App {
       const C = GAME_CLASSES[game.id] || this.extras.games?.GAME_CLASSES_EXTRA?.[game.id];
       ctrl = C ? new C(this, game) : new HomeMode(this);
     } else if (t === 'studio' && this.extras.studio?.StudioMode) {
-      ctrl = new this.extras.studio.StudioMode(this);
+      ctrl = new this.extras.studio.StudioMode(this, id || undefined);
     } else if (t === 'studio') {
       ctrl = new FreeMode(this);
     } else {
