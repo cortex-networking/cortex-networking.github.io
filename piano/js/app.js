@@ -65,6 +65,15 @@ class UI {
     if (main) el.append(h('div', { class: 'big-main' }, main));
     if (sub) el.append(h('div', { class: 'big-sub' }, sub));
   }
+  /** Custom visual for a mode (game scene, piano roll…). Pass null to clear. */
+  layer(node, { hideStaff = true } = {}) {
+    const el = $('#layer');
+    el.textContent = '';
+    if (node) el.append(node);
+    el.closest('.score').classList.toggle('has-layer', !!node);
+    el.closest('.score').classList.toggle('no-staff', !!node && hideStaff);
+    return el;
+  }
   foot(...nodes) { this.footEl.textContent = ''; nodes.filter(Boolean).forEach((n) => this.footEl.append(n)); }
   toast(text, ms = 3600) {
     this.toastEl.textContent = text;
@@ -190,6 +199,7 @@ class App {
     this.ui.status('');
     this.ui.pips(0, 0);
     this.ui.big();
+    this.ui.layer(null);
     this.ctrl = ctrl;
     this.renderList();
     ctrl.enter();

@@ -67,7 +67,7 @@ export function parsePitch(str) {
   return (+m[3] + 1) * 12 + LETTER_PC[LETTERS.indexOf(m[1])] + alter;
 }
 
-const TOKEN = /^(r|[A-G][#b]?-?\d(?:\+[A-G][#b]?-?\d)*)([whqes])?(\.)?(?::(\d+))?$/;
+const TOKEN = /^(r|[A-G][#b]?-?\d(?:\+[A-G][#b]?-?\d)*)([whqes])?(\.)?(?::(\d+))?(~)?$/;
 
 /**
  * Parse a voice string into events.
@@ -77,45 +77,83 @@ const TOKEN = /^(r|[A-G][#b]?-?\d(?:\+[A-G][#b]?-?\d)*)([whqes])?(\.)?(?::(\d+))
  *   "E4q:3"                      — fingering (chords: one digit per note, low to high)
  * Returns { events, length, bars } where bars are beat positions of '|' marks.
  */
+export const DYNAMICS = { ppp: 0.2, pp: 0.3, p: 0.42, mp: 0.55, mf: 0.68, f: 0.82, ff: 0.92, fff: 1 };
+const DYN_TOKEN = /^!(ppp|pp|p|mp|mf|f|ff|fff)$/;
+
+/**
+ * Parse a voice string into events.
+ *   "E4q D4 C4 D4 | E4 E4 E4h"  durations w h q e s (+ '.'), carried forward
+ *   "C3+E3+G3h"                  chord
+ *   "rq"                         rest
+ *   "E4q:3"                      fingering (chords: one digit per note, low to high)
+ *   "C4h~ C4q"                   tie: the second C is held, not replayed
+ *   "!p"  "!f"                   dynamic mark for the notes that follow
+ * Returns { events, length, bars, marks } where bars are beat positions of '|' marks.
+ */
 export function parseVoice(str, hand = 'R', startBeat = 0) {
   const events = [];
   const bars = [];
+  const marks = [];
   let t = startBeat;
   let dur = 1;
+  let dyn = null;
+  let tieFrom = new Map(); // midi -> event that is tied forward
   for (const tok of str.trim().split(/\s+/)) {
     if (!tok) continue;
     if (tok === '|') { bars.push(t); continue; }
+    const dm = DYN_TOKEN.exec(tok);
+    if (dm) { dyn = dm[1]; marks.push({ t, hand, dyn }); continue; }
     const m = TOKEN.exec(tok);
     if (!m) throw new Error(`Bad token "${tok}"`);
     if (m[2]) dur = DUR[m[2]] * (m[3] ? 1.5 : 1);
     else if (m[3]) dur = dur * 1.5;
+    const nextTies = new Map();
     if (m[1] === 'r') {
       events.push({ t, d: dur, rest: true, hand });
     } else {
       const pitches = m[1].split('+').map(parsePitch).sort((a, b) => a - b);
       const fingers = m[4] ? m[4].split('').map(Number) : [];
-      pitches.forEach((midi, i) => events.push({ t, d: dur, midi, hand, finger: fingers[i] }));
+      pitches.forEach((midi, i) => {
+        const e = { t, d: dur, midi, hand, finger: fingers[i], dyn };
+        const from = tieFrom.get(midi);
+        if (from) { e.tiedFrom = from; from.tieTo = e; }
+        if (m[5]) nextTies.set(midi, e);
+        events.push(e);
+      });
     }
+    tieFrom = nextTies;
     t += dur;
   }
-  return { events, length: t, bars };
+  // sounding duration: a tied note rings through its continuations
+  for (const e of events) {
+    if (e.rest || e.tiedFrom) continue;
+    let sd = e.d, c = e.tieTo;
+    while (c) { sd += c.d; c = c.tieTo; }
+    e.sd = sd;
+  }
+  return { events, length: t, bars, marks };
 }
 
 /** Build a full score object from a song/exercise definition. */
 export function buildScore(def) {
   const bpb = def.time ? (def.time[0] * 4) / def.time[1] : 4;
   const pickup = def.pickup || 0;
-  const rh = def.rh ? parseVoice(def.rh, 'R') : { events: [], length: 0, bars: [] };
-  const lh = def.lh ? parseVoice(def.lh, 'L') : { events: [], length: 0, bars: [] };
+  const empty = { events: [], length: 0, bars: [], marks: [] };
+  const rh = def.rh ? parseVoice(def.rh, 'R') : empty;
+  const lh = def.lh ? parseVoice(def.lh, 'L') : empty;
   const events = [...rh.events, ...lh.events].sort((a, b) => a.t - b.t || (a.midi ?? 0) - (b.midi ?? 0));
   const length = Math.max(rh.length, lh.length);
   const barlines = [];
   for (let b = pickup > 0 ? pickup : bpb; b < length - 1e-6; b += bpb) barlines.push(b);
   events.forEach((e, i) => (e.i = i));
   return {
-    title: def.title, key: def.key || 'C', time: def.time || [4, 4], bpb, pickup,
-    tempo: def.tempo || 90, events, notes: events.filter((e) => !e.rest), length, barlines,
+    id: def.id, title: def.title, key: def.key || 'C', time: def.time || [4, 4], bpb, pickup,
+    tempo: def.tempo || 90, events,
+    notes: events.filter((e) => !e.rest && !e.tiedFrom),
+    length, barlines,
+    marks: [...rh.marks, ...lh.marks],
     hands: { R: rh.events.some((e) => !e.rest), L: lh.events.some((e) => !e.rest) },
+    chords: def.chords || null, style: def.style || null,
     _bars: { R: rh.bars, L: lh.bars },
   };
 }
