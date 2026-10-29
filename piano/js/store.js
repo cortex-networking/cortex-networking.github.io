@@ -5,7 +5,7 @@ const OLD = 'middle-c/v1';
 
 export const DEFAULT_SETTINGS = {
   instrument: 'grand', volume: 0.8, echo: true, output: 'builtin', input: 'all',
-  labels: 'c', range: 'auto', latency: 0, hints: true, openAll: false, band: true,
+  labels: 'c', range: 'auto', latency: 0, hints: true, openAll: false, band: true, bandVolume: 0.7,
 };
 
 export const INTERESTS = [

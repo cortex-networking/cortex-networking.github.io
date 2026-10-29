@@ -61,6 +61,7 @@ class App {
     this.sound = new audio.Sound();
     this.sound.instrument = this.settings.instrument;
     this.sound.volume = this.settings.volume;
+    this.sound.setBandVolume?.(this.settings.bandVolume ?? 0.7);
     this.input = new Input();
     this.input.selected = this.settings.input;
     this.keyboard = new Keyboard($('#piano'), this.input);
@@ -428,6 +429,8 @@ class App {
     const outs = [{ value: 'builtin', label: 'Built-in sound' }, ...this.input.outputs.map((o) => ({ value: o.id, label: o.name }))];
     const vol = h('input', { type: 'range', min: 0, max: 1, step: 0.05, oninput: (e) => { this.sound.setVolume(+e.target.value); save('volume', +e.target.value); } });
     vol.value = s.volume;
+    const bandVol = h('input', { type: 'range', min: 0, max: 1, step: 0.05, oninput: (e) => { this.sound.setBandVolume?.(+e.target.value); save('bandVolume', +e.target.value); } });
+    bandVol.value = s.bandVolume ?? 0.7;
     const lat = h('input', { type: 'range', min: 0, max: 200, step: 5 });
     const latOut = h('output', {}, `${s.latency} ms`);
     lat.value = s.latency;
@@ -460,6 +463,7 @@ class App {
         field('set-vol', 'Volume', vol),
         check('set-echo', 'Play sound when I press my MIDI keyboard', s.echo, (v) => save('echo', v), 'Turn this off if your keyboard has its own speakers.'),
         check('set-band', 'Backing band in play-along and listen', s.band, (v) => save('band', v)),
+        field('set-bandvol', 'Band volume', bandVol),
         this.input.outputs.length ? field('set-out', 'Lesson and accompaniment sound', select(s.output, outs, (v) => { save('output', v); this._applyOutput(); }), 'Send demos to a digital piano instead of this device.') : null,
         audio.SAMPLE_CREDIT ? h('p', { class: 'help' }, audio.SAMPLE_CREDIT) : null,
       ),
