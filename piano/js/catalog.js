@@ -1,10 +1,26 @@
 // Course, song and game catalog: one place that joins the content files.
-import { LESSONS as OLD_LESSONS, UNITS, SONGS as OLD_SONGS, GAMES as BASE_GAMES } from './library.js';
+import { SONGS as OLD_SONGS, GAMES as BASE_GAMES } from './library.js';
+import { CHAPTERS, LESSONS } from './curriculum.js';
 
-let chapters = UNITS.map((u) => ({ id: u.id, title: u.title, summary: '', target: null }));
-let lessons = OLD_LESSONS.map((l) => ({ ...l, chapter: l.unit, goal: l.summary, skills: l.skills || [] }));
 let songs = OLD_SONGS.map((s) => ({ tags: ['starter'], style: 'folk', ...s }));
+let chapters = CHAPTERS;
+let lessons = [];
 let games = [...BASE_GAMES];
+
+/** Lessons whose chapter target tune isn't in the library switch to their alternate wording. */
+function resolveLessons(raw) {
+  const has = (id) => songs.some((s) => s.id === id);
+  return raw.map((l) => {
+    const ch = chapters.find((c) => c.id === l.chapter);
+    const missing = l.altTitle && ch && ch.target && !has(ch.target);
+    if (!missing) return l;
+    return {
+      ...l, title: l.altTitle, summary: l.altSummary || l.summary, goal: l.altGoal || l.goal,
+      steps: l.steps.map((st) => (st.altText ? { ...st, text: st.altText } : st)),
+    };
+  });
+}
+lessons = resolveLessons(LESSONS);
 
 export const catalog = {
   get chapters() { return chapters; },
@@ -13,8 +29,8 @@ export const catalog = {
   get games() { return games; },
   set({ chapters: c, lessons: l, songs: s, games: g }) {
     if (c) chapters = c;
-    if (l) lessons = l;
     if (s) songs = s;
+    if (l || s) lessons = resolveLessons(l || LESSONS);
     if (g) games = g;
   },
   song(id) { return songs.find((s) => s.id === id) || null; },

@@ -111,10 +111,12 @@ export function parseVoice(str, hand = 'R', startBeat = 0) {
     if (m[1] === 'r') {
       events.push({ t, d: dur, rest: true, hand });
     } else {
-      const pitches = m[1].split('+').map(parsePitch).sort((a, b) => a - b);
+      const parts = m[1].split('+').map((p) => ({ midi: parsePitch(p), prefer: /^[A-G]b/.test(p) ? 'flat' : /^[A-G]#/.test(p) ? 'sharp' : undefined }))
+        .sort((a, b) => a.midi - b.midi);
       const fingers = m[4] ? m[4].split('').map(Number) : [];
-      pitches.forEach((midi, i) => {
+      parts.forEach(({ midi, prefer }, i) => {
         const e = { t, d: dur, midi, hand, finger: fingers[i], dyn };
+        if (prefer) e.prefer = prefer;
         const from = tieFrom.get(midi);
         if (from) { e.tiedFrom = from; from.tieTo = e; }
         if (m[5]) nextTies.set(midi, e);
