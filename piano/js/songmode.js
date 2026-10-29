@@ -20,6 +20,12 @@ export class SongMode {
     if (this.opts.hands === 'B' ? !(this.score.hands.R && this.score.hands.L) : !this.score.hands[this.opts.hands]) this.opts.hands = this.score.hands.R ? 'R' : 'L';
   }
 
+  /** Key hints fade once a piece is mastered in wait mode. */
+  get hints() {
+    const best = this.app.store.song(this.song.id);
+    return this.app.settings.hints && !(best && best.wait >= 0.95 && (best.plays || 0) >= 2);
+  }
+
   get hasBand() { return !!this.song.chords && this.song.style !== 'none'; }
 
   enter() {
@@ -44,8 +50,10 @@ export class SongMode {
     const parts = [];
     if (best?.play) parts.push(`best play-along ${Math.round(best.play * 100)}%`);
     if (best?.wait) parts.push(`best wait-mode accuracy ${Math.round(best.wait * 100)}%`);
-    const blurb = this.song.blurb ? `${this.song.blurb} ` : '';
-    this.app.ui.prompt(`${blurb}${tips[this.opts.mode]}${parts.length ? ` Your ${parts.join(', ')}.` : ''}`);
+    let text = `${this.song.blurb ? `${this.song.blurb} ` : ''}${tips[this.opts.mode]}`;
+    if (parts.length) text += ` Your ${parts.join(', ')}.`;
+    if (this.opts.mode === 'wait' && this.app.settings.hints && !this.hints) text += ' You know this one, so key hints stay off unless you miss.';
+    this.app.ui.prompt(text);
   }
 
   build() {
@@ -54,7 +62,7 @@ export class SongMode {
     this.session = new Session(this.app, this.score, {
       mode: o.mode, hands: o.hands, accompany: o.accompany, tempoScale: o.tempo, metronome: o.metronome,
       band: this.hasBand && this.app.settings.band && (o.mode === 'play' || o.mode === 'listen'),
-      hints: this.app.settings.hints, staves: 'grand',
+      hints: this.hints, staves: 'grand',
       context: { ref: { type: 'song', id: this.song.id }, skills: o.hands === 'B' ? ['hands-together', 'sight-reading'] : o.hands === 'L' ? ['left-hand', 'sight-reading'] : ['sight-reading'] },
       onUpdate: (st, last) => this._stats(st, last),
       onDone: (r) => this._done(r),

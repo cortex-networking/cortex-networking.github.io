@@ -270,6 +270,15 @@ export class Session {
     const spb = this.spb;
     const beat = (now - lat - this.t0) / spb;
     staff.setBeat(beat);
+    if (this.o.mode !== 'listen') {
+      const lead = this.countInBeats;
+      const n = beat < 0 ? Math.floor((beat + lead) / this.clickUnit) + 1 : 0;
+      if (n !== this._count) {
+        this._count = n;
+        if (n > 0) this.app.ui.big(String(n), 'Count in', 'huge');
+        else this.app.ui.big();
+      }
+    }
     const horizon = now + 0.3;
     while (this.t0 + this.clickBeat * spb < horizon) {
       const b = this.clickBeat;

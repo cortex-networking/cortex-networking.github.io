@@ -83,7 +83,7 @@ export class Staff {
     this.headX = this.panelW + 3.8 * sp;
     const clipId = `clip-${this.uid}`;
     const clip = el('clipPath', { id: clipId }, defs);
-    el('rect', { x: this.panelW, y: 0, width: w - this.panelW, height: h }, clip);
+    el('rect', { x: this.panelW + 1.2 * sp, y: 0, width: w - this.panelW, height: h }, clip);
 
     this.gLines = el('g', { class: 'st-lines' }, this.svg);
     this.gZone = el('g', { class: 'st-zone' }, this.svg);

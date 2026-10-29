@@ -342,7 +342,8 @@ export class StepRunner {
         );
         return;
       }
-      this.timer = setTimeout(() => this.next(), 650);
+      if (step.type === 'say') this.next();
+      else this.timer = setTimeout(() => this.next(), 650);
       return;
     }
     this._oops(i, step, r, summary, pass);
@@ -352,6 +353,8 @@ export class StepRunner {
     const { ui, coach } = this.app;
     const pct = Math.round(r.score * 100);
     const why = summary?.top ? coach.explain(summary.top) : '';
+    if (this.app.staff.score) { this.app.staff.clearClasses('cur', 'done'); this.app.staff.setBeat(0); }
+    this.app.keyboard.clear('cue-r', 'cue-l');
     ui.prompt(`Not quite yet: ${pct}%, and this step needs ${Math.round(pass * 100)}%. ${why}`);
     ui.big('', 'Let’s fix it');
     let remedy = null;
