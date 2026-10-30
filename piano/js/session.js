@@ -33,7 +33,8 @@ export class Session {
 
   _resetStats() {
     const total = this.o.mode === 'tap' ? this.steps.length : this.practice.length;
-    this.stats = { correct: 0, wrong: 0, perfect: 0, good: 0, ok: 0, missed: 0, short: 0, rest: 0, sync: 0, loud: 0, total };
+    // missed counts every note not played in time; slip, the ones of those where a wrong key was pressed instead
+    this.stats = { correct: 0, wrong: 0, perfect: 0, good: 0, ok: 0, missed: 0, slip: 0, short: 0, rest: 0, sync: 0, loud: 0, total };
   }
 
   get spb() { return 60 / (this.score.tempo * this.o.tempoScale); }
@@ -68,6 +69,7 @@ export class Session {
     this.down = new Map();       // midi -> { note, at } for hold checks
     this.handHits = new Map();   // step t -> { R: time, L: time }
     this.dynFlag = new Set();
+    this.slipped = new Set();    // notes a wrong key was played for (they are wrong notes, not left out)
     this.tracker = this.o.mode !== 'listen' && coach ? coach.begin({ ...(this.o.context || {}), score: this.score, hands: this.o.hands, tempo: this.o.tempoScale, staves: this.o.staves }) : null;
     if (this.o.mode === 'wait') {
       this.idx = 0;
@@ -215,7 +217,7 @@ export class Session {
       this.stats.wrong++;
       kb.flash(midi, 'miss', 450);
       if (resting && !due) { this.stats.rest++; this._coach('rest', { t: beat }); }
-      else if (due && !tap) this._coach('wrong-pitch', { expected: due.midi, played: midi, t: due.t });
+      else if (due && !tap) { this.slipped.add(due.i); this._coach('wrong-pitch', { expected: due.midi, played: midi, t: due.t }); }
       else this._coach(tap ? 'early' : 'missed', { t: beat, ms: 0 });
       this._update({ grade: resting ? 'rest' : 'wrong' });
       return;
@@ -314,7 +316,8 @@ export class Session {
         this.judged.add(n.i);
         this.stats.missed++;
         (tap ? n.notes : [n]).forEach((x) => staff.noteClass(x.i, 'miss'));
-        this._coach('missed', { expected: n.midi, t: n.t });
+        if (this.slipped?.has(n.i)) this.stats.slip++;
+        else this._coach('missed', { expected: n.midi, t: n.t });
         this._update({ grade: 'missed' });
       }
       this.missPtr++;

@@ -186,8 +186,12 @@ export class SongMode {
     let msg;
     if (r.mode === 'wait') msg = `${pct}% of your notes were right first time${better ? ', a new best' : ''}.`;
     else if (r.mode === 'tap') msg = `Rhythm ${pct}%: ${r.perfect} right on the beat, ${r.good + r.ok} close, ${r.missed} missed.`;
-    else msg = `${pct}%: ${r.perfect} perfect, ${r.good + r.ok} close, ${r.missed} missed${better ? '. New best' : ''}.`;
-    const top = r.coach?.top;
+    else {
+      const slips = r.slip || 0, wrong = r.wrong ? `, ${r.wrong} wrong ${r.wrong === 1 ? 'key' : 'keys'}` : '';
+      msg = `${pct}%: ${r.perfect} perfect, ${r.good + r.ok} close${wrong}, ${r.missed - slips} missed${better ? '. New best' : ''}.`;
+    }
+    // a three-star run gets no "thing to work on": one stray note out of sixty isn't a pattern
+    const top = r.stars < 3 ? r.coach?.top : null;
     if (top) msg += ` Main thing to work on: ${coach.explain(top).toLowerCase()}`;
     ui.prompt(msg);
     ui.status('');
