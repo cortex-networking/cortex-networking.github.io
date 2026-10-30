@@ -15,7 +15,7 @@ export const SONGS = [
   {
     id: 'au-clair', title: 'Au Clair de la Lune', composer: 'Traditional (France)', level: 1, key: 'C', time: [4, 4], tempo: 92,
     rh: 'C4q:1 C4 C4 D4:2 | E4h:3 D4h:2 | C4q:1 E4:3 D4:2 D4 | C4w:1 | C4q C4 C4 D4 | E4h D4h | C4q E4 D4 D4 | C4w | D4q:5 D4 D4 D4 | A3h:2 A3h | D4q:5 C4:4 B3:3 A3:2 | G3w:1 | C4q:1 C4 C4 D4:2 | E4h:3 D4h:2 | C4q:1 E4:3 D4:2 D4 | C4w:1',
-    lh: 'C3w:5 | C3h G3h:1 | C3h G3h | C3w:5 | C3w | C3h G3h | C3h G3h | C3w | G3w:1 | F3w:2 | G3w:1 | G3w | C3w:5 | C3h G3h:1 | C3h G3h | C3w:5',
+    lh: 'C3w:5 | C3h G3h:1 | C3h G3h | C3w:5 | C3w | C3h G3h | C3h G3h | C3w | G3w:1 | F3w:2 | G3w:1 | B2w:5 | C3w:5 | C3h G3h:1 | C3h G3h | C3w:5',
   },
   {
     id: 'ode-to-joy', title: 'Ode to Joy', composer: 'Ludwig van Beethoven', level: 2, key: 'C', time: [4, 4], tempo: 100,
@@ -45,7 +45,7 @@ export const SONGS = [
   {
     id: 'yankee-doodle', title: 'Yankee Doodle', composer: 'Traditional (America)', level: 2, key: 'C', time: [4, 4], tempo: 112,
     rh: 'C4q:1 C4 D4:2 E4:3 | C4:1 E4:3 D4:2 G3 | C4:1 C4 D4:2 E4:3 | C4h:1 B3h | C4q:1 C4 D4:2 E4:3 | F4:4 E4:3 D4:2 C4:1 | B3 G3 A3 B3 | C4h C4h',
-    lh: 'C3w:5 | C3h G3h:1 | C3w:5 | C3h G3h:1 | C3w:5 | F3h:2 C3h:5 | G3w:1 | C3w:5',
+    lh: 'C3w:5 | C3h B2h:5 | C3w:5 | C3h G3h:1 | C3w:5 | F3h:2 C3h:5 | B2w:5 | C3w:5',
   },
   {
     id: 'jingle-bells', title: 'Jingle Bells', composer: 'James Lord Pierpont', level: 3, key: 'C', time: [4, 4], tempo: 120,
