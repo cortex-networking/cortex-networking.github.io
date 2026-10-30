@@ -39,6 +39,16 @@ export function spell(midi, key = 'C', prefer) {
   for (const [l, a] of Object.entries(sig)) {
     if (pc(LETTER_PC[l] + a) === p) { letter = +l; alter = a; }
   }
+  // minor keys: the raised 7th (leading tone) keeps the 7th's letter, so D minor has C♯, not D♭
+  if (letter === undefined && !prefer && /^[A-G][b#]?m$/.test(key)) {
+    const tl = LETTERS.indexOf(key[0]);
+    const tonic = LETTER_PC[tl] + (key[1] === 'b' ? -1 : key[1] === '#' ? 1 : 0);
+    if (p === pc(tonic - 1)) {
+      const l7 = (tl + 6) % 7;
+      const a = ((p - LETTER_PC[l7] + 18) % 12) - 6;
+      if (Math.abs(a) <= 1) { letter = l7; alter = a; }
+    }
+  }
   if (letter === undefined) {
     const nat = LETTER_PC.indexOf(p);
     if (nat >= 0) { letter = nat; alter = 0; }
