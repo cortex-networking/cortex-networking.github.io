@@ -13,7 +13,7 @@ import { HomeMode, ProgressMode, nextLesson, showCertificate } from './home.js';
 import { FreeMode, GAME_CLASSES } from './modes.js';
 
 const $ = (s) => document.querySelector(s);
-const TABS = ['learn', 'songs', 'games', 'studio', 'free'];
+const TABS = ['learn', 'songs', 'games', 'free'];
 
 class UI {
   constructor() {
@@ -76,7 +76,7 @@ class App {
     this.coach = new Coach(this);
     this.ctrl = null;
     this.tab = 'learn';
-    this.extras = { games: null, studio: null };
+    this.extras = { games: null };
     this._wire();
     this.input.attachComputerKeyboard();
     this.input.autoConnect();
@@ -108,11 +108,7 @@ class App {
       this.extras.games = m;
       if (m.GAMES_EXTRA) catalog.set({ games: [...catalog.games, ...m.GAMES_EXTRA.filter((g) => !catalog.games.some((x) => x.id === g.id))] });
     } catch { /* optional */ }
-    try {
-      this.extras.studio = await import('./studio.js');
-    } catch { /* optional */ }
-    document.querySelector('.tabs [data-tab="studio"]').hidden = !this.extras.studio;
-    if (this.tab === 'games' || this.tab === 'studio') this.route(); else this.renderList();
+    if (this.tab === 'games') this.route(); else this.renderList();
   }
 
   // ---------- events ----------
@@ -201,10 +197,6 @@ class App {
       this.current = game.id;
       const C = GAME_CLASSES[game.id] || this.extras.games?.GAME_CLASSES_EXTRA?.[game.id];
       ctrl = C ? new C(this, game) : new HomeMode(this);
-    } else if (t === 'studio' && this.extras.studio?.StudioMode) {
-      ctrl = new this.extras.studio.StudioMode(this, id || undefined);
-    } else if (t === 'studio') {
-      ctrl = new FreeMode(this);
     } else {
       ctrl = new FreeMode(this);
     }
@@ -299,9 +291,6 @@ class App {
           const best = this.store.bestGame(g.id);
           return item('games', g.id, g.title, g.summary, best ? `Best ${best}` : null);
         })));
-    } else if (this.tab === 'studio') {
-      if (this.extras.studio?.renderStudioList) this.extras.studio.renderStudioList(this, list);
-      else list.append(h('section', { class: 'group help' }, h('h2', {}, 'Studio'), h('p', {}, 'Record up to eight tracks, layer parts, and export MIDI files. Recordings stay in this browser.')));
     } else {
       list.append(h('section', { class: 'group help' },
         h('h2', {}, 'No keyboard plugged in?'),
