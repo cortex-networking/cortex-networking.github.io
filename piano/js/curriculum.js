@@ -499,8 +499,8 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play the left-hand part of Au Clair de la Lune, a French folk song, while the computer plays the melody you learned in chapter 1.' },
       { type: 'seq', lh: 'C3w:5 | C3h G3h:1 | C3h G3h | C3w:5', text: 'The first line of the left-hand part: C, then C and G.' },
-      { type: 'seq', lh: 'G3w:1 | F3w:2 | G3w:1 | G3w', text: 'The middle section moves to G and F. Your thumb plays G and finger 2 plays F.' },
-      { type: 'game', game: 'aliens', params: { song: 'au-clair', hands: 'R' }, pass: 0.6, text: 'The aliens teach you Au Clair de la Lune phrase by phrase: copy each phrase, then play the phrases joined together.' },
+      { type: 'seq', lh: 'G3w:1 | F3w:2 | G3w:1 | B2w:5', text: 'The middle section moves to G and F: your thumb plays G and finger 2 plays F. Then your little finger reaches down to B, just below C, ready to step back up to C.' },
+      { type: 'game', game: 'aliens', params: { song: 'au-clair', hands: 'L' }, pass: 0.6, text: 'The aliens teach you the left-hand part of Au Clair de la Lune phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'au-clair', mode: 'wait', hands: 'L', text: 'The whole song. You play the left hand; the melody plays as you go.' },
       { type: 'song', song: 'au-clair', mode: 'play', hands: 'L', tempo: 0.8, check: true, text: 'Check: now in time. Count the whole notes all the way to four.' },
     ],
