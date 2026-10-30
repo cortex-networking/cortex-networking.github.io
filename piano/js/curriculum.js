@@ -820,7 +820,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play this chapter’s piece, a dark minor-key classic. Grieg wrote In the Hall of the Mountain King in 1875 for trolls closing in on a trapped hero. It starts quietly and creeps up in speed and volume.',
         altText: 'By the end of this lesson you’ll play this chapter’s piece, the opening of Beethoven’s Für Elise, a minor-key classic built on a restless turn between E and D♯.' },
-      { type: 'seq', rh: 'A3e:1 B3:2 C4:3 D4:4 E4:5 C4:3 E4q:5 | D#4e:4 B3:2 D#4q:4 D4e:4 B3:2 D4q:4', text: 'Two figures in A minor: a creeping climb, then the same shape sinking by a half step, from D♯ down to D. The black key sits right beside the white key it bends from.' },
+      { type: 'seq', rh: 'A3e:1 B3:2 C4:3 D4:4 E4:5 C4:3 E4q:5 | D#4e:4 B3:2 D#4q:4 D4e:4 Bb3:2 D4q:4', text: 'Two figures in A minor: a creeping climb, then the same shape sinking by a half step, from D♯ down to D. The black key sits right beside the white key it bends from.' },
       { type: 'seq', rh: 'E4e:5 D#4:4 E4:5 D#4:4 E4:5 B3:2 D4:4 C4:3 | A3h:1 rh', text: 'A restless turn around E and D♯ that settles on A. The black key sits right beside its white neighbour, so keep your fingers close to the keys.' },
       { type: 'game', game: 'aliens', params: { song: 'hall-of-the-mountain-king', hands: 'R' }, pass: 0.6, text: 'The aliens teach you In the Hall of the Mountain King phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'hall-of-the-mountain-king', alt: 'fur-elise', mode: 'wait', hands: 'R', text: 'The whole piece at your own pace. The left hand plays along.' },
