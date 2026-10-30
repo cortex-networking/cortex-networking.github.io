@@ -96,6 +96,7 @@ export function parseVoice(str, hand = 'R', startBeat = 0) {
   const marks = [];
   let t = startBeat;
   let dur = 1;
+  let base = 1; // the last undotted note value, so a bare '.' dots it once
   let dyn = null;
   let tieFrom = new Map(); // midi -> event that is tied forward
   for (const tok of str.trim().split(/\s+/)) {
@@ -105,8 +106,8 @@ export function parseVoice(str, hand = 'R', startBeat = 0) {
     if (dm) { dyn = dm[1]; marks.push({ t, hand, dyn }); continue; }
     const m = TOKEN.exec(tok);
     if (!m) throw new Error(`Bad token "${tok}"`);
-    if (m[2]) dur = DUR[m[2]] * (m[3] ? 1.5 : 1);
-    else if (m[3]) dur = dur * 1.5;
+    if (m[2]) { base = DUR[m[2]]; dur = base * (m[3] ? 1.5 : 1); }
+    else if (m[3]) dur = base * 1.5;
     const nextTies = new Map();
     if (m[1] === 'r') {
       events.push({ t, d: dur, rest: true, hand });
