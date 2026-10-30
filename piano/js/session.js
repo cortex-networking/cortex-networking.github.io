@@ -95,6 +95,7 @@ export class Session {
 
   stop(silent = false) {
     this.running = false;
+    clearTimeout(this._finishTimer); // a finish scheduled by the run being stopped must not end the next one
     this.app.sound.stopAll();
     this.app.keyboard.clear('cue-r', 'cue-l', 'demo');
     this.app.keyboard.clearFingers();
@@ -171,7 +172,7 @@ export class Session {
     this.misses = 0;
     this.app.keyboard.clear('cue-r', 'cue-l');
     this.app.keyboard.clearFingers();
-    if (!next) { this._update(); setTimeout(() => this._finish(), 500); return; }
+    if (!next) { this._update(); this._finishLater(500); return; }
     this.targetBeat = next.t;
     this._cueStep();
     this._update({ grade: 'step' });
@@ -305,9 +306,12 @@ export class Session {
     // missed notes
     const tap = this.o.mode === 'tap';
     const due = tap ? this.steps.map((s) => ({ i: `s${s.t}`, t: s.t, notes: s.notes })) : this.practice;
+    // a key press reaches us `latency` ms after it happens (see _inputTime), so wait that long
+    // before calling a note missed, or a late-but-in-window note is failed before it arrives
+    const inLat = (this.app.settings.latency || 0) / 1000;
     while (this.missPtr < due.length) {
       const n = due[this.missPtr];
-      if (this.t0 + n.t * spb + lat + WINDOW > now) break;
+      if (this.t0 + n.t * spb + lat + WINDOW + inLat > now) break;
       if (!this.judged.has(n.i)) {
         this.judged.add(n.i);
         this.stats.missed++;
@@ -341,7 +345,7 @@ export class Session {
     this._demoKeys(now);
     if (!this.ended && beat > this.score.length + 0.3 && this.missPtr >= due.length) {
       this.ended = true;
-      setTimeout(() => this._finish(), 300);
+      this._finishLater(300);
     }
   }
 
@@ -385,6 +389,11 @@ export class Session {
       this.tracker = null;
     }
     return out;
+  }
+
+  _finishLater(ms) {
+    clearTimeout(this._finishTimer);
+    this._finishTimer = setTimeout(() => this._finish(), ms);
   }
 
   _finish() {
