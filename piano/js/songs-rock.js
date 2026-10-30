@@ -23,10 +23,10 @@ export const SONGS_ROCK = [
     level: 3, key: 'G', time: [4, 4], tempo: 92, pickup: 1, tags: ['march', 'folk', 'epic'], style: 'march',
     blurb: 'An old Irish air sung by soldiers marching to war, with a proud leap up the octave and a sharp dotted snap.',
     chords: 'G | G | C G | D G | G | G | C G | D G | G | D | Em | C G | G | G | C G | D G',
-    rh: '!mf D4q:1 | G4q.:1 A4e:2 C5e:4 B4e:3 A4e:2 G4e:1 | B4q:1 D5:2 G5:5 F#5e.:4 G5s:5 | E5q:3 D5:2 B4e.:1 C5s:2 D5e:3 B4e:1 | A4h:2 G4q:1 D4q:1 | '
-      + 'G4q.:1 A4e:2 C5e:4 B4e:3 A4e:2 G4e:1 | B4q:1 D5:2 G5:5 F#5e.:4 G5s:5 | E5q:3 D5:2 B4e.:1 C5s:2 D5e:3 B4e:1 | A4h:2 G4q:1 re D5e:2 | '
+    rh: '!mf D4q:1 | G4q.:1 A4e:2 C5e:4 B4e:3 A4e:2 G4e:1 | B4q:2 D5:3 G5:5 F#5e.:4 G5s:5 | E5q:3 D5:2 B4e.:1 C5s:2 D5e:3 B4e:1 | A4h:2 G4q:1 D4q:1 | '
+      + 'G4q.:1 A4e:2 C5e:4 B4e:3 A4e:2 G4e:1 | B4q:2 D5:3 G5:5 F#5e.:4 G5s:5 | E5q:3 D5:2 B4e.:1 C5s:2 D5e:3 B4e:1 | A4h:2 G4q:1 re D5e:2 | '
       + '!f G5q:5 F#5:4 E5:3 F#5e:4 G5e:5 | F#5q:4 E5:3 D5:2 re D5e:2 | E5q.:3 B4e:1 B4q:1 D5q:2 | E5q.:3 F#5e:4 G5q:5 G5 | '
-      + '!mf G4q.:1 A4e:2 C5e:4 B4e:3 A4e:2 G4e:1 | B4q:1 D5:2 G5:5 F#5e.:4 G5s:5 | E5q:3 D5:2 B4e.:1 C5s:2 D5e:3 B4e:1 | A4q.:2 G4e:1 G4h:1',
+      + '!mf G4q.:1 A4e:2 C5e:4 B4e:3 A4e:2 G4e:1 | B4q:2 D5:3 G5:5 F#5e.:4 G5s:5 | E5q:3 D5:2 B4e.:1 C5s:2 D5e:3 B4e:1 | A4q.:2 G4e:1 G4h:1',
     lh: 'rq | G2h:5 D3h:1 | G2h D3h | C3h G2h | D3h G2h | G2h D3h | G2h D3h | C3h G2h | D3h G2h | '
       + 'G2h D3h | D3h A2h | E3h B2h | C3h G2h | G2h D3h | G2h D3h | C3h G2h | D3h G2h',
   },
@@ -126,7 +126,7 @@ export const SONGS_ROCK = [
       + 'E4s:1 C5e:5 E4s:1 C5e:5 E4s:1 C5s:5~ | C5q~ C5s C5s:1 D5:2 D#5:3 | E5s:4 C5:2 D5:3 E5s:4~ E5 B4:1 D5e:3 | C5q.:2 C5s:1 D5:2 | '
       + '!f E5s:3 C5:1 D5:2 E5s:3~ E5 C5:1 D5:2 C5:1 | E5s:3 C5:1 D5:2 E5s:3~ E5 C5:1 D5:2 C5:1 | E5s:3 C5:1 D5:2 E5s:3~ E5 B4:1 D5e:3 | C5q:2 rq',
     lh: 're | C3e:5 E3+G3+C4e:321 G2e:5 G3+Bb3+C4e:321 | F2e:5 A3+C4e:21 E2e:5 G3+C4e:21 | G2e:5 E3+G3+C4e:321 G2e:5 F3+G3+B3e:321 | C3e:5 E3+G3+C4e:321 E3+G3+C4e G3+B3e:21 | '
-      + 'C3e:5 E3+G3+C4e:321 G2e:5 G3+Bb3+C4e:321 | F2e:5 A3+C4e:21 E2e:5 Eb2e:4 | D2e:5 D3+F#3+A3+C4e:5321 D3e:5 F#3+A3+C4e:321 | G3+B3e:21 G2e:5 A2e:4 B2e:3 | '
+      + 'C3e:5 E3+G3+C4e:321 G2e:5 G3+Bb3+C4e:321 | F2e:5 A3+C4e:21 E2e:3 Eb2e:4 | D2e:5 D3+F#3+A3+C4e:5321 D3e:5 F#3+A3+C4e:321 | G3+B3e:21 G2e:5 A2e:4 B2e:3 | '
       + 'C3e:5 E3+G3+C4e:321 G2e:5 G3+Bb3+C4e:321 | F2e:5 A3+C4e:21 E2e:5 G3+C4e:21 | G2e:5 E3+G3+C4e:321 G2e:5 F3+G3+B3e:321 | C3e:5 E3+G3+C4e:321 C3+E3+G3e:531 re | '
       + 'C3e:5 G3+C4e:21 Bb2e:5 G3+C4e:21 | A2e:5 F3+C4e:21 Ab2e:5 F3+C4e:21 | G2e:5 G3+C4e:21 G2e:5 G3+B3e:21 | C3+G3e:51 G2e:5 C2e:5 re',
   },
