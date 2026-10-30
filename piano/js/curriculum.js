@@ -75,7 +75,7 @@ export const LESSONS = [
       { type: 'say', text: 'Each finger has a number. The thumb is 1, then 2, 3 and 4, and the little finger is 5. Both hands use the same numbers. Curve your fingers as if you were holding a small ball.' },
       { type: 'find', notes: [62], show: 'both', finger: 2, text: 'Keep your right thumb on middle C. D sits between the two black keys: play it with finger 2.' },
       { type: 'find', notes: [64], show: 'both', finger: 3, text: 'E is just to the right of the two black keys. Play it with finger 3.' },
-      { type: 'seq', rh: 'C4q:1 D4:2 E4:3 D4:2 | C4h:1 rh | E4q:3 D4:2 C4h:1 | E4q:3 D4:2 C4h:1', text: 'Walk up and back, then down the hill: E, D, C. The music waits for you, so take your time.' },
+      { type: 'seq', rh: 'C4q:1 D4:2 E4:3 D4:2 | C4w:1 | E4q:3 D4:2 C4h:1 | E4q:3 D4:2 C4h:1', text: 'Walk up and back, then down the hill: E, D, C. The music waits for you, so take your time.' },
       { type: 'find', pool: [60, 62, 64], count: 6, show: 'name', text: 'Play each note when its name appears. Nothing is lit, so use the black keys to find your way.' },
       {
         type: 'quiz', check: true, text: 'Check: answer by choosing, or by playing the key itself.',
@@ -822,6 +822,7 @@ export const LESSONS = [
         altText: 'By the end of this lesson you’ll play this chapter’s piece, the opening of Beethoven’s Für Elise, a minor-key classic built on a restless turn between E and D♯.' },
       { type: 'seq', rh: 'A3e:1 B3:2 C4:3 D4:4 E4:5 C4:3 E4q:5 | D#4e:4 B3:2 D#4q:4 D4e:4 Bb3:2 D4q:4', text: 'Two figures in A minor: a creeping climb, then the same shape sinking by a half step, from D♯ down to D. The black key sits right beside the white key it bends from.' },
       { type: 'seq', rh: 'E4e:5 D#4:4 E4:5 D#4:4 E4:5 B3:2 D4:4 C4:3 | A3h:1 rh', text: 'A restless turn around E and D♯ that settles on A. The black key sits right beside its white neighbour, so keep your fingers close to the keys.' },
+      { type: 'find', notes: [76, 77, 79, 81], show: 'both', text: 'This piece climbs higher than any note so far. E sits in the top space of the treble staff, F on the top line, G just above the staff, and A on a short ledger line above that. Play each one.' },
       { type: 'game', game: 'aliens', params: { song: 'hall-of-the-mountain-king', hands: 'R' }, pass: 0.6, text: 'The aliens teach you In the Hall of the Mountain King phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'hall-of-the-mountain-king', alt: 'fur-elise', mode: 'wait', hands: 'R', text: 'The whole piece at your own pace. The left hand plays along.' },
       { type: 'song', song: 'hall-of-the-mountain-king', alt: 'fur-elise', mode: 'play', hands: 'R', tempo: 0.6, pass: 0.6, check: true, text: 'Check: in time, at a slow tempo. Keep the eighth notes even.' },
@@ -924,7 +925,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play Greensleeves, an English ballad over four hundred years old. Its long-short rhythm and minor key give it a haunting, ancient sound.',
         altText: 'By the end of this lesson you’ll play Row, Row, Row Your Boat with both hands, the classic six-eight round.' },
-      { type: 'rhythm', time: [3, 4], key: 'Am', rh: 'A4h:1 C5q:3 | E5q.:5 D5e:4 C5q:3 | B4h:2 G#4q:1 | A4h.:1', tempo: 84, text: 'Warm up with the long-short rhythm from your minor waltz.' },
+      { type: 'tap', time: [6, 8], rh: 'B4q B4e B4e. B4s B4e | B4q B4e B4e. B4s B4e | B4q B4e B4e. B4s B4e | B4h.', tempo: 72, text: 'One new rhythm first. A dotted eighth and a sixteenth together take the time of two eighth notes: long, then very short, like a skip. In six-eight, count “1 and a”: the dotted eighth starts on 1 and the sixteenth slips in just before “a”. Any key works.' },
       { type: 'game', game: 'aliens', params: { song: 'greensleeves', hands: 'R' }, pass: 0.6, text: 'The aliens teach you Greensleeves phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'greensleeves', alt: 'row-your-boat', mode: 'wait', hands: 'R', text: 'The whole melody at your own pace. The left hand plays along.' },
       { type: 'song', song: 'greensleeves', alt: 'row-your-boat', mode: 'wait', hands: 'B', text: 'Now both hands, at your own pace.' },
@@ -1054,7 +1055,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play Iron Riff, an original piece built on power chords. Play it heavy, steady and in time.',
         altText: 'By the end of this lesson you’ll play Jingle Bells with both hands, a lively American song from 1857.' },
-      { type: 'rhythm', lh: 'E2+B2e:51 E2+B2 E2+B2 E2+B2 G2+D3q:51 E2+B2 | F2+C3q:51 F2+C3 E2+B2h', tempo: 80, hands: 'L', text: 'Warm up with the power-chord riff from earlier in this chapter.' },
+      { type: 'rhythm', lh: 'E2+B2e:51 E2+B2 E2+B2 E2+B2 E2+B2 E2+B2 G2+D3q:51 | C2+G2e:51 C2+G2 C2+G2 C2+G2 D2+A2e:51 D2+A2 D2+A2 D2+A2', tempo: 80, hands: 'L', text: 'Warm up with the first and third bars of the riff. Two shapes are new, and they sit even lower than E5: C5, with C on the second ledger line below the bass staff, and D5, with D between the two ledger lines. Keep fingers 5 and 1 in the same shape and move it down.' },
       { type: 'game', game: 'ripchord', params: { song: 'iron-riff', hands: 'L' }, pass: 0.6, text: 'Ripchord with the power chords of Iron Riff, in order, in your left hand. Hold each one before the timer runs out.' },
       { type: 'song', song: 'iron-riff', alt: 'jingle-bells', mode: 'wait', hands: 'L', text: 'Learn the left-hand part at your own pace. The right hand plays along.' },
       { type: 'song', song: 'iron-riff', alt: 'jingle-bells', mode: 'wait', hands: 'B', text: 'Now both hands at your own pace.' },
