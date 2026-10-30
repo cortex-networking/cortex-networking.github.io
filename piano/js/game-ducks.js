@@ -362,7 +362,8 @@ export class Game extends ArcadeBase {
       });
       if (d.throws <= 0) {
         d.state = 'leaving';
-        setTimeout(() => this._escape(d, 'out of throws'), 260);
+        // a game timer (cleared on exit), and only for a duck still in this round
+        this.after(0.26, () => { if (this.stage && this.ducks.includes(d)) this._escape(d, 'out of throws'); });
       }
     }
     this._ammo();

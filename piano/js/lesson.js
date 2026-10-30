@@ -95,7 +95,7 @@ class FindTask {
       keyboard.flash(midi, 'hit');
       this.locked = true;
       this.present({ reveal: true });
-      setTimeout(() => {
+      this.rt = setTimeout(() => {
         this.locked = false; this.hinted = false; this.k++;
         if (this.k >= this.queue.length) this.done({ correct: this.correct, wrong: this.wrong });
         else this.present();
@@ -112,7 +112,7 @@ class FindTask {
     }
   }
 
-  stop() { clearTimeout(this.wt); this.k = Infinity; }
+  stop() { clearTimeout(this.wt); clearTimeout(this.rt); this.k = Infinity; }
 }
 
 /** "Play any C" / "play a group of black keys" drills (any octave). */
@@ -190,6 +190,7 @@ export class StepRunner {
   start(i = 0) { this.i = i - 1; this.next(); }
 
   next() {
+    if (this.stopped) return;
     this.stopTask();
     this.i++;
     if (this.i >= this.steps.length) { this.o.onDone?.(this.results); return; }
@@ -306,6 +307,7 @@ export class StepRunner {
     const { ui } = this.app;
     let mod = null;
     try { mod = await import('./games-extra.js'); } catch { mod = null; }
+    if (this.stopped) return;
     if (!mod || !mod.QuizRunner) {
       ui.prompt('Quiz questions aren’t available right now.');
       ui.foot(h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.done(i, { score: 1 }) }, 'Continue'));
@@ -323,7 +325,7 @@ export class StepRunner {
     const { ui } = this.app;
     let mod = null;
     try { mod = await import(`./game-${step.game}.js`); } catch { mod = null; }
-    if (this.i !== i) return;
+    if (this.i !== i || this.stopped) return;
     if (!mod?.Game) { this.done(i, { score: 1 }); return; }
     const back = { kicker: ui.kicker.textContent, title: ui.title.textContent };
     const restore = () => { ui.head(back); this.o.onProgress?.(i, this.steps.length); };
@@ -356,7 +358,7 @@ export class StepRunner {
   }
 
   done(i, r) {
-    if (i !== this.i) return;
+    if (i !== this.i || this.stopped) return;
     const step = this.steps[i];
     const pass = step.pass ?? (step.type === 'song' && step.mode === 'play' ? 0.6 : PASS[step.type] ?? 0.7);
     const summary = r.coach || (this.tracker ? this.app.coach.end(this.tracker, { score: r.score, skills: this.o.lesson?.skills || [] }) : null);
@@ -425,7 +427,7 @@ export class StepRunner {
         ui.head(back);
         this.o.onProgress?.(i, this.steps.length);
         ui.prompt('Now try the step again.');
-        setTimeout(() => this.run(i), 900);
+        setTimeout(() => { if (!this.stopped) this.run(i); }, 900);
       },
     });
     this.sub.start();
@@ -435,7 +437,8 @@ export class StepRunner {
   noteOn(e) { const r = this.active; r.task?.noteOn?.(e.midi, e.time, e.vel, e.source); }
   noteOff(e) { const r = this.active; r.task?.noteOff?.(e.midi, e.time); }
   tick(dt) { const r = this.active; r.task?.tick?.(dt); }
-  stop() { this.sub?.stop(); this.stopTask(); }
+  /** Leaving the page: stop the task, and make late timers and callbacks from it do nothing. */
+  stop() { this.stopped = true; this.sub?.stop(); this.stopTask(); }
 }
 
 // ----------------------------------------------------------------------
