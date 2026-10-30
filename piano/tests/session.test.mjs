@@ -84,6 +84,21 @@ describe('play mode timing grades', () => {
     assert.equal(coached.at(-1)[0], 'rest');
   });
 
+  test('hands together: a wrong key while one hand rests and the other holds a note is a wrong key, not a rest', () => {
+    const { s, coached } = setup({ rh: 'C4w', lh: 'C3q rq rh' }, { mode: 'play', hands: 'B' });
+    s.start();
+    press(s, 60, s.t0);
+    press(s, 48, s.t0);
+    press(s, 70, s.t0 + 1.5 * s.spb);
+    assert.deepEqual([s.stats.wrong, s.stats.rest], [1, 0]);
+    assert.notEqual(coached.at(-1)[0], 'rest');
+    // both hands resting is a rest mistake
+    const b = setup({ rh: 'C4q rq rh', lh: 'C3q rq rh' }, { mode: 'play', hands: 'B' });
+    b.s.start();
+    press(b.s, 70, b.s.t0 + 1.5 * b.s.spb);
+    assert.equal(b.s.stats.rest, 1);
+  });
+
   test('hands together: more than 90 ms apart is a sync slip', () => {
     const a = setup({ rh: 'C4w', lh: 'C3w' }, { mode: 'play', hands: 'B' });
     a.s.start();
