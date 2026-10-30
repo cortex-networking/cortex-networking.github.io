@@ -44,7 +44,19 @@ export class Session {
   }
   get countInBeats() {
     const bpb = this.score.bpb || 4;
-    return bpb * Math.max(1, Math.ceil((3 * this.clickUnit) / bpb - 1e-6));
+    const full = bpb * Math.max(1, Math.ceil((3 * this.clickUnit) / bpb - 1e-6));
+    // with a pickup, count a full bar and then into the pickup ("1 2 3 4 1 2 3" before a one-beat
+    // pickup in 4/4), so the count-in ends where the music starts and every click stays on the
+    // beats of the song's bars
+    const p = (((this.score.pickup || 0) % bpb) + bpb) % bpb;
+    return p > 1e-6 && bpb - p > 1e-6 ? full + bpb - p : full;
+  }
+
+  /** True when beat b is the first beat of a bar (bars start at the pickup). */
+  _downbeat(b) {
+    const bpb = this.score.bpb || 4;
+    const m = (((b - (this.score.pickup || 0)) % bpb) + bpb) % bpb;
+    return m < 1e-6 || bpb - m < 1e-6;
   }
 
   mount() {
@@ -272,8 +284,10 @@ export class Session {
     const beat = (now - lat - this.t0) / spb;
     staff.setBeat(beat);
     if (this.o.mode !== 'listen') {
-      const lead = this.countInBeats;
-      const n = beat < 0 ? Math.floor((beat + lead) / this.clickUnit) + 1 : 0;
+      const lead = this.countInBeats, bpb = this.score.bpb || 4;
+      // the count restarts at 1 on every downbeat of the count-in
+      const inBar = (((beat - (this.score.pickup || 0)) % bpb) + bpb) % bpb;
+      const n = beat < 0 && beat >= -lead - 1e-6 ? Math.floor(inBar / this.clickUnit + 1e-6) + 1 : 0;
       if (n !== this._count) {
         this._count = n;
         if (n > 0) this.app.ui.big(String(n), 'Count in', 'huge');
@@ -283,11 +297,8 @@ export class Session {
     const horizon = now + 0.3;
     while (this.t0 + this.clickBeat * spb < horizon) {
       const b = this.clickBeat;
-      const bpb = this.score.bpb || 4;
       if (b < 0 || (this.o.metronome && this.o.mode !== 'listen')) {
-        const rel = b < 0 ? b + this.countInBeats : b - (this.score.pickup || 0);
-        const down = Math.abs(((rel % bpb) + bpb) % bpb) < 1e-6;
-        if (b < this.score.length - 1e-6) sound.click(this.t0 + b * spb, down);
+        if (b < this.score.length - 1e-6) sound.click(this.t0 + b * spb, this._downbeat(b));
       }
       this.clickBeat += this.clickUnit;
       if (this.clickBeat > this.score.length + 4) break;
