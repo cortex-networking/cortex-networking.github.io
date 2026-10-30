@@ -6,7 +6,7 @@ import { Staff } from './staff.js';
 import { h, stars } from './ui.js';
 import { Store, INTERESTS } from './store.js';
 import { Coach } from './coach.js';
-import { catalog, COLLECTIONS } from './catalog.js';
+import { catalog, COLLECTIONS, FEATURED } from './catalog.js';
 import { LessonMode, PracticeMode, lessonUnlocked, resolveRef } from './lesson.js';
 import { SongMode } from './songmode.js';
 import { HomeMode, ProgressMode, nextLesson, showCertificate } from './home.js';
@@ -276,6 +276,11 @@ class App {
         const q = (this.songQuery || '').toLowerCase();
         const match = (s) => !q || `${s.title} ${s.composer} ${(s.tags || []).join(' ')}`.toLowerCase().includes(q);
         const placed = new Set();
+        const featured = FEATURED.map((id) => catalog.song(id)).filter((x) => x && match(x));
+        if (featured.length && !q) {
+          body.append(h('section', { class: 'group' }, h('h2', {}, 'Featured'),
+            ...featured.map((s) => item('songs', s.id, s.title, `${s.composer}, level ${s.level}`, this.store.song(s.id) ? stars(this.store.song(s.id).stars) : null))));
+        }
         const interests = this.store.profile?.interests || [];
         const order = [...COLLECTIONS].sort((a, b) => (interests.includes(b.id) ? 1 : 0) - (interests.includes(a.id) ? 1 : 0));
         for (const col of order) {

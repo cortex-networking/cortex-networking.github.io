@@ -533,3 +533,10 @@ details.more > summary { display: none; }
   .device { max-width: 150px; padding: 6px 10px 6px 9px; }
   .tabs button { padding: 6px 4px; font-size: 14px; }
 }
+
+/* landscape phones: one-row header so the board keeps its height */
+@media (max-height: 500px) and (min-width: 600px) {
+  .bar { flex-wrap: nowrap; padding: 6px 12px; gap: 10px; }
+  .tabs { order: 0; width: auto; flex: 1 1 auto; max-width: 420px; }
+  .tabs button { padding: 5px 8px; font-size: 14px; }
+}
