@@ -1,5 +1,6 @@
 // Adaptive coach: classifies mistakes, tracks skill mastery, and writes targeted practice.
 import { pc, isBlack, spell, noteName, buildScore } from './theory.js';
+import { profileFor } from './controls.js';
 
 const DAY = 86400000;
 
@@ -121,9 +122,10 @@ export class Coach {
    */
   record(type, info = {}, tracker = this.current) {
     let cat = type;
-    if (type === 'hit') { if (tracker) tracker.hits++; return null; }
+    if (type === 'hit') { this._hits = (this._hits || 0) + 1; if (tracker) tracker.hits++; return null; }
     if (type === 'wrong-pitch') {
       cat = classifyPitch(info.expected, info.played, info.key);
+      this._shiftCheck(info.expected, info.played);
       if (tracker) tracker.confusions.push([info.expected, info.played]);
       const k = `${info.expected}>${info.played}`;
       this.data.confusions[k] = (this.data.confusions[k] || 0) + 1;
@@ -152,6 +154,32 @@ export class Coach {
     }
     this._save();
     return cat;
+  }
+
+  /**
+   * Spot a keyboard whose octave or transpose buttons have been bumped: several wrong notes in a
+   * row that are all off by the same amount (12 for an octave) with nothing right in between.
+   */
+  _shiftCheck(expected, played) {
+    if (expected === undefined || played === undefined) return;
+    const now = Date.now();
+    const diff = played - expected;
+    const run = (this._shift && this._shift.diff === diff && now - this._shift.at < 20000 && this._shift.hitsAt === this._hits) ? this._shift : { diff, n: 0 };
+    run.n++; run.at = now; run.hitsAt = this._hits;
+    this._shift = run;
+    const need = Math.abs(diff) % 12 === 0 ? 3 : 4;
+    if (diff === 0 || run.n < need || (this._shiftToldAt && now - this._shiftToldAt < 60000)) return;
+    this._shiftToldAt = now;
+    const dev = this.app.input?.devices?.[0];
+    const prof = profileFor(dev?.name || '');
+    let msg;
+    if (Math.abs(diff) % 12 === 0) {
+      const n = Math.abs(diff) / 12;
+      msg = `Your keyboard sounds ${n === 1 ? 'an octave' : `${n} octaves`} ${diff > 0 ? 'higher' : 'lower'} than the music. If you are playing the right keys, ${diff > 0 ? prof.octaveDown : prof.octaveUp}.`;
+    } else {
+      msg = `Every note is coming out ${Math.abs(diff)} half step${Math.abs(diff) > 1 ? 's' : ''} ${diff > 0 ? 'high' : 'low'}. If you are playing the right keys, ${prof.transpose}.`;
+    }
+    this.app.ui?.toast?.(msg, 9000);
   }
 
   /** Finish an activity: update skills, store a replayable context for the worst problem. */

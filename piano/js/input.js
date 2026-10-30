@@ -18,6 +18,9 @@ export class Input extends EventTarget {
     this.pcDown = new Map();    // code -> midi
     this.status = navigator.requestMIDIAccess ? 'idle' : 'unsupported';
     this.lastActivity = 0;
+    // notes that are really pads or buttons: channel 10 (the drum channel) always, plus any note
+    // the app has learned as a control
+    this.isControlNote = () => false;
   }
 
   get supported() { return !!navigator.requestMIDIAccess; }
@@ -59,13 +62,28 @@ export class Input extends EventTarget {
 
   _message(e, port) {
     if (this.selected !== 'all' && port.id !== this.selected) return;
-    const [st, d1, d2] = e.data;
+    const [st, d1, d2 = 0] = e.data;
     if (st >= 0xf0) return;
-    const cmd = st & 0xf0;
+    const cmd = st & 0xf0, ch = st & 0x0f;
+    const isNote = cmd === 0x90 || cmd === 0x80;
+    if (isNote && (ch === 9 || this.isControlNote(ch, d1))) {
+      const on = cmd === 0x90 && d2 > 0;
+      this._control({ kind: 'note', ch, num: d1, value: on ? d2 / 127 : 0, port: port.id, name: port.name });
+      return;
+    }
     if (cmd === 0x90 && d2 > 0) this.press(d1, d2 / 127, 'midi', e.timeStamp);
     else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) this.release(d1, 'midi', e.timeStamp);
     else if (cmd === 0xb0 && d1 === 64) this.setPedal(d2 >= 64);
     else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) this.releaseAll();
+    else if (cmd === 0xb0) this._control({ kind: 'cc', ch, num: d1, value: d2 / 127, port: port.id, name: port.name });
+    else if (cmd === 0xe0) this._control({ kind: 'pb', ch, num: 0, value: ((d2 << 7) | d1) / 16383, port: port.id, name: port.name });
+    else if (cmd === 0xc0) this._control({ kind: 'pc', ch, num: d1, value: 1, port: port.id, name: port.name });
+  }
+
+  /** Knobs, faders, buttons, wheels and pads: everything that isn't a key. */
+  _control(detail) {
+    this.lastActivity = performance.now();
+    this.dispatchEvent(new CustomEvent('control', { detail }));
   }
 
   press(midi, vel = 0.75, source = 'screen', time = performance.now()) {

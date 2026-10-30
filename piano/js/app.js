@@ -12,6 +12,7 @@ import { SongMode } from './songmode.js';
 import { HomeMode, ProgressMode, nextLesson, showCertificate } from './home.js';
 import { FreeMode } from './modes.js';
 import { JukeboxMode } from './jukebox.js';
+import { Controls, ACTIONS, WIZARD, profileFor, describe } from './controls.js';
 
 const $ = (s) => document.querySelector(s);
 const TABS = ['learn', 'songs', 'games', 'free'];
@@ -75,6 +76,8 @@ class App {
     this.staff = new Staff($('#staff'));
     this.ui = new UI();
     this.coach = new Coach(this);
+    this.controls = new Controls(this);
+    this.input.isControlNote = (ch, note) => this.controls.map[`note:${ch}:${note}`] !== undefined;
     this.ctrl = null;
     this.tab = 'learn';
     this.extras = { games: null, arcade: null };
@@ -142,9 +145,16 @@ class App {
     this.input.addEventListener('plugged', () => {
       this.keyboard.ripple();
       const d = this.input.devices[this.input.devices.length - 1];
-      this.ui.toast(`${d.name} connected.`);
+      const prof = profileFor(d.name);
+      // line the on-screen keys up with the real keyboard, unless a size was picked by hand
+      if (prof.range && this.settings.range === 'auto') this.keyboard.setPreferred(prof.range);
+      const setUp = Object.keys(this.controls.map).length > 0;
+      this.ui.toast(prof.id === 'qx61'
+        ? `Alesis QX61 connected: all 61 keys ready.${setUp ? '' : ' Its faders, knobs, buttons and pads can run the app too: Settings, Keyboard controls.'}`
+        : `${d.name} connected.${prof.controls && !setUp ? ' Knobs and buttons can be set up in Settings, Keyboard controls.' : ''}`, 6000);
       this._applyOutput();
     });
+    this.input.addEventListener('control', (ev) => this.controls.handle(ev.detail));
     this.input.addEventListener('octave', () => this.ui.toast(`Computer keys now start at C${this.input.pcOctave}.`, 1800));
 
     $('#device').addEventListener('click', () => this._deviceClick());
@@ -397,7 +407,7 @@ class App {
     const st = this.input.status;
     btn.dataset.state = st;
     if (st === 'connected') {
-      const names = this.input.devices.map((d) => d.name);
+      const names = this.input.devices.map((d) => (profileFor(d.name).id === 'generic' ? d.name : profileFor(d.name).name));
       label.textContent = names.length > 1 ? `${names.length} keyboards` : names[0];
       btn.title = names.join(', ');
     } else if (st === 'waiting') { label.textContent = 'Plug in a keyboard'; btn.title = 'MIDI is on. Connect a USB MIDI keyboard.'; }
@@ -420,6 +430,103 @@ class App {
     const id = this.settings.output;
     this.sound.output = id && id !== 'builtin' ? this.input.outputs.find((o) => o.id === id) || null : null;
     this.sound.applyOutputPrograms?.();
+  }
+
+  // ---------- keyboard controls (knobs, faders, buttons, pads) ----------
+  _controlsFieldset() {
+    const devs = this.input.devices;
+    const prof = devs.length ? profileFor(devs[0].name) : null;
+    const box = h('fieldset', { class: 'ctl' }, h('legend', {}, 'Keyboard controls'));
+    const draw = () => {
+      box.querySelectorAll(':scope > :not(legend)').forEach((n) => n.remove());
+      box.append(h('p', { class: 'help' }, prof
+        ? `${prof.name}${prof.keys ? `, ${prof.keys} keys` : ''}. Give its faders, knobs, buttons and pads a job: press Set, then move or press the control.`
+        : 'Connect your keyboard, then give its faders, knobs, buttons and pads a job here.'));
+      const status = h('p', { class: 'ctl-status', 'aria-live': 'polite' });
+      const rows = ACTIONS.map((a) => {
+        const cur = this.controls.assigned(a.id);
+        const set = h('button', { type: 'button', class: 'btn small', onclick: async () => {
+          set.textContent = a.kind === 'range' ? 'Move a fader or knob…' : 'Press a button or pad…';
+          set.disabled = true;
+          const m = await this.controls.learn(a.kind);
+          if (m) { this.controls.assign(a.id, m); status.textContent = `${a.label}: ${describe(m)}.`; }
+          draw();
+        } }, cur ? 'Change' : 'Set');
+        const clr = cur ? h('button', { type: 'button', class: 'btn small quiet', onclick: () => { this.controls.clear(a.id); draw(); } }, 'Clear') : null;
+        return h('div', { class: 'ctl-row' },
+          h('span', { class: 'ctl-name' }, a.label, h('span', { class: 'ctl-hint' }, a.hint)),
+          h('span', { class: 'ctl-cur' }, cur ? describe(cur) : 'Not set'),
+          h('span', { class: 'ctl-btns' }, set, clr));
+      });
+      const wizard = h('button', { type: 'button', class: 'btn', onclick: () => this._controlsWizard(box, draw) }, 'Guided setup');
+      const t = this.settings.touch;
+      const touch = h('div', { class: 'ctl-row' },
+        h('span', { class: 'ctl-name' }, 'Touch check', h('span', { class: 'ctl-hint' }, 'So loud and soft are judged by how you play on this keyboard.')),
+        h('span', { class: 'ctl-cur' }, t ? `Soft about ${Math.round(t.soft * 127)}, loud about ${Math.round(t.loud * 127)} (of 127)` : 'Not done'),
+        h('span', { class: 'ctl-btns' }, h('button', { type: 'button', class: 'btn small', onclick: () => this._touchCheck(box, draw) }, t ? 'Redo' : 'Check')));
+      box.append(h('div', { class: 'ctl-actions' }, wizard,
+        Object.keys(this.controls.map).length ? h('button', { type: 'button', class: 'btn quiet', onclick: () => { this.controls.clearAll(); draw(); } }, 'Clear all') : null),
+        status, ...rows, touch, h('p', { class: 'help' }, prof ? prof.padTip : profileFor('').padTip));
+    };
+    draw();
+    return box;
+  }
+
+  /** Ask for a few soft then a few loud notes and keep the player's own velocity range. */
+  async _touchCheck(box, done) {
+    box.querySelectorAll(':scope > :not(legend)').forEach((n) => n.remove());
+    const ask = h('p', { class: 'ctl-ask', 'aria-live': 'polite' });
+    const meter = h('p', { class: 'help' });
+    const cancel = h('button', { type: 'button', class: 'btn quiet', onclick: () => finish(null) }, 'Cancel');
+    box.append(ask, meter, h('div', { class: 'ctl-actions' }, cancel));
+    let phase = 'soft', vals = { soft: [], loud: [] }, finish;
+    const median = (a) => { const b = [...a].sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+    const show = () => {
+      ask.textContent = phase === 'soft' ? 'Play 5 notes as SOFTLY as you comfortably can.' : 'Now play 5 notes LOUD, with weight from your arm.';
+      meter.textContent = `${vals[phase].length} of 5`;
+    };
+    show();
+    const result = await new Promise((resolve) => {
+      finish = resolve;
+      this._touchListener = (ev) => {
+        if (ev.detail.source !== 'midi') return;
+        vals[phase].push(ev.detail.vel);
+        if (vals[phase].length >= 5) {
+          if (phase === 'soft') { phase = 'loud'; show(); } else resolve({ soft: median(vals.soft), loud: median(vals.loud) });
+        } else meter.textContent = `${vals[phase].length} of 5 (last one ${Math.round(ev.detail.vel * 127)})`;
+      };
+      this.input.addEventListener('noteon', this._touchListener);
+    });
+    this.input.removeEventListener('noteon', this._touchListener);
+    if (result && result.loud - result.soft >= 0.12) {
+      this.settings.touch = result; this.store.save();
+      this.ui.toast(`Touch saved: soft about ${Math.round(result.soft * 127)}, loud about ${Math.round(result.loud * 127)}.`, 3000);
+    } else if (result) this.ui.toast('Soft and loud came out almost the same. Try again with a bigger difference, or check the keyboard’s velocity curve.', 6000);
+    done();
+  }
+
+  async _controlsWizard(box, done) {
+    box.querySelectorAll(':scope > :not(legend)').forEach((n) => n.remove());
+    const ask = h('p', { class: 'ctl-ask', 'aria-live': 'polite' });
+    const step = h('p', { class: 'help' });
+    let skip = null;
+    const skipBtn = h('button', { type: 'button', class: 'btn', onclick: () => skip?.() }, 'Skip');
+    const stopBtn = h('button', { type: 'button', class: 'btn quiet', onclick: () => { this.controls.cancelLearn(); this._wizStop = true; } }, 'Finish');
+    box.append(step, ask, h('div', { class: 'ctl-actions' }, skipBtn, stopBtn));
+    this._wizStop = false;
+    for (let i = 0; i < WIZARD.length && !this._wizStop; i++) {
+      const w = WIZARD[i];
+      const def = ACTIONS.find((a) => a.id === w.action);
+      step.textContent = `Step ${i + 1} of ${WIZARD.length}`;
+      ask.textContent = w.ask;
+      const m = await Promise.race([
+        this.controls.learn(def.kind, 30000),
+        new Promise((r) => { skip = () => { this.controls.cancelLearn(); r(null); }; }),
+      ]);
+      if (m) { this.controls.assign(w.action, m); this.ui.toast(`${def.label}: ${describe(m)}`, 1500); }
+    }
+    this.controls.cancelLearn();
+    done();
   }
 
   // ---------- settings ----------
@@ -472,6 +579,7 @@ class App {
         ], (v) => { save('labels', v); this.keyboard.setLabels(v); })),
         h('p', { class: 'help' }, 'Computer keys: A W S E D F T G Y H U J K play from C upward. Z and X change octave.'),
       ),
+      this._controlsFieldset(),
       h('fieldset', {}, h('legend', {}, 'Sound'),
         field('set-inst', 'Instrument', select(s.instrument, [
           { value: 'grand', label: 'Grand piano' }, { value: 'epiano', label: 'Electric piano' }, { value: 'organ', label: 'Organ' },
@@ -495,6 +603,7 @@ class App {
         h('button', { class: 'btn primary', value: 'done' }, 'Done'),
       ),
     ));
+    d.addEventListener('close', () => { this.controls.cancelLearn(); this._wizStop = true; if (this._touchListener) this.input.removeEventListener('noteon', this._touchListener); }, { once: true });
     d.showModal();
   }
 }

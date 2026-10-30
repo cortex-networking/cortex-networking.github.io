@@ -541,3 +541,18 @@ details.more > summary { display: none; }
   .tabs button { padding: 5px 8px; font-size: 14px; }
 }
 .card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* ---------- Settings: keyboard controls ---------- */
+.ctl-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 10px; }
+.ctl-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--rule); }
+.ctl-name { font-weight: 500; display: flex; flex-direction: column; gap: 2px; }
+.ctl-hint { font-weight: 400; font-size: 13px; color: var(--muted); }
+.ctl-cur { font-size: 13.5px; color: var(--ink-2); overflow-wrap: anywhere; }
+.ctl-btns { display: flex; gap: 6px; justify-content: flex-end; }
+.ctl-status { min-height: 1.2em; margin: 0; font-size: 14px; color: var(--ink-2); }
+.ctl-ask { font: 500 17px/1.4 var(--sans); margin: 6px 0; }
+.btn.small { padding: 5px 10px; font-size: 13.5px; }
+@media (max-width: 520px) {
+  .ctl-row { grid-template-columns: 1fr auto; }
+  .ctl-cur { grid-column: 1 / -1; grid-row: 2; }
+}

@@ -242,7 +242,11 @@ export class Session {
       // loud / soft (real keyboards only)
       if (best.dyn && source === 'midi' && !this.dynFlag.has(best.dyn + best.t)) {
         const want = DYNAMICS[best.dyn];
-        if ((want <= 0.45 && vel > 0.72) || (want >= 0.8 && vel < 0.5)) {
+        // thresholds follow the player's own touch when they've done the touch check in Settings
+        const t = this.app.settings.touch;
+        const softMax = t ? t.soft + 0.65 * (t.loud - t.soft) : 0.72;
+        const loudMin = t ? t.soft + 0.35 * (t.loud - t.soft) : 0.5;
+        if ((want <= 0.45 && vel > softMax) || (want >= 0.8 && vel < loudMin)) {
           this.dynFlag.add(best.dyn + best.t);
           this.stats.loud++;
           this._coach('dynamics', { want: best.dyn, got: vel, t: best.t });
