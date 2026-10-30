@@ -272,6 +272,9 @@ export class Coach {
         steps.push({ type: 'say', text: cat === 'early'
           ? 'Rushing usually means the hands move before the beat arrives. Listen for the click and let it land first, then play.'
           : 'Dragging usually comes from looking for the next note too late. Look one note ahead while you play.' });
+        steps.push(usable
+          ? { type: 'game', game: 'roboman', params: { score: passage, hands: hands === 'L' ? 'L' : 'R' }, pass: 0.7, text: `Roboman: the rhythm of ${where}. Tap the short notes, hold the long ones, right on the click.` }
+          : { type: 'game', game: 'roboman', params: { level: 0, bars: 4 }, pass: 0.7, text: 'Roboman: tap the short notes and hold the long ones, right on the click.' });
         if (usable) {
           steps.push({ type: 'tap', score: passage, tempoScale: 0.75, text: `Tap the rhythm of ${where} on any key. Only the timing counts.` });
           steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.8, text: 'Now with the real notes, still a little slower.' });
@@ -282,6 +285,7 @@ export class Coach {
       }
       case 'short': {
         steps.push({ type: 'say', text: 'Long notes need their full value. Keep the key down and count through the note: a half note is “one, two”, a whole note “one, two, three, four”.' });
+        steps.push({ type: 'game', game: 'roboman', params: { rhythm: 'C4h C4h | C4w | C4q C4q C4h | C4w', tempo: 72 }, pass: 0.7, text: 'Roboman: hold each long note until its bridge reaches the other side.' });
         steps.push({ type: 'rhythm', rh: 'C4w | E4h G4h | E4h. rq | C4w', tempo: 72, text: 'Hold each note right up to the next one.' });
         if (usable) steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.8, text: `Now ${where}, holding every long note.` });
         break;
@@ -289,6 +293,7 @@ export class Coach {
       case 'rest': {
         steps.push({ type: 'say', text: 'A rest is silence you count. Lift your hand off the keys during a rest and keep counting in your head.' });
         steps.push({ type: 'tap', rh: 'B4q rq B4q rq | B4h rh | B4q B4 rh | B4w', tempo: 76, text: 'Tap the notes and stay silent through the rests.' });
+        steps.push({ type: 'game', game: 'roboman', params: { level: 1, bars: 4 }, pass: 0.7, text: 'Roboman: in the rests the floor is solid. Keep your hands still and let him roll.' });
         if (usable) steps.push({ type: 'tap', score: passage, tempoScale: 0.8, text: `The rhythm of ${where}, rests included.` });
         break;
       }

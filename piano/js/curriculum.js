@@ -374,6 +374,7 @@ export const LESSONS = [
     staves: 'treble',
     steps: [
       { type: 'say', text: 'By the end of this review you’ll be able to read a melody you’ve never seen, with notes and rests of different lengths, and play it in time.' },
+      { type: 'game', game: 'roboman', params: { level: 1, bars: 4 }, pass: 0.6, text: 'Roboman: tap the quarter notes, hold the half and whole notes to build bridges, and keep still in the rests.' },
       {
         type: 'quiz', text: 'Quick review of note and rest lengths.',
         items: [
@@ -676,6 +677,7 @@ export const LESSONS = [
     staves: 'grand',
     steps: [
       { type: 'say', text: 'By the end of this review you’ll be able to read a mix of eighth notes, dotted notes and rests, and play them in time with both hands.' },
+      { type: 'game', game: 'roboman', params: { level: 4, bars: 4 }, pass: 0.6, text: 'Roboman: dotted quarters and eighths. Count “1 (2) +” and tap the eighth on the “+”.' },
       {
         type: 'quiz', text: 'Quick questions about note lengths.',
         items: [
@@ -889,6 +891,7 @@ export const LESSONS = [
     staves: 'grand',
     steps: [
       { type: 'say', text: 'By the end of this review you’ll be able to tell three-four from six-eight, both on the page and by feel, and play in six-eight with both hands.' },
+      { type: 'game', game: 'roboman', params: { level: 3, bars: 4 }, pass: 0.6, text: 'Roboman in three-four: three beats in each bar, and the dotted half note lasts all three.' },
       {
         type: 'quiz', text: 'Time signatures.',
         items: [
