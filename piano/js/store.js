@@ -22,13 +22,18 @@ const blankData = () => ({ lessons: {}, songs: {}, games: {}, coach: null, pract
 const uid = () => Math.random().toString(36).slice(2, 9);
 const day = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
+const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+
 function read(key) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
 
 export class Store {
   constructor() {
+    // anything but an object (an array, a number, null...) is unusable: start over rather than
+    // fail to load the app at all
     let root = read(KEY);
+    if (!isObj(root)) root = null;
     if (!root) {
       const old = read(OLD);
       const id = uid();
@@ -41,10 +46,12 @@ export class Store {
         for (const k of ['songOpts', 'gameLevel', 'freeBpm']) if (old[k] !== undefined) d[k] = old[k];
       }
     }
-    root.settings = { ...DEFAULT_SETTINGS, ...root.settings };
-    if (!root.profiles?.length) { const id = uid(); root.profiles = [{ id, name: 'Player 1', interests: [], created: Date.now() }]; root.current = id; }
+    root.settings = { ...DEFAULT_SETTINGS, ...(isObj(root.settings) ? root.settings : {}) };
+    root.profiles = Array.isArray(root.profiles) ? root.profiles.filter((p) => isObj(p) && p.id) : [];
+    if (!root.profiles.length) { const id = uid(); root.profiles = [{ id, name: 'Player 1', interests: [], created: Date.now() }]; root.current = id; }
     if (!root.profiles.some((p) => p.id === root.current)) root.current = root.profiles[0].id;
-    for (const p of root.profiles) root.data[p.id] = { ...blankData(), ...(root.data[p.id] || {}) };
+    if (!isObj(root.data)) root.data = {};
+    for (const p of root.profiles) root.data[p.id] = { ...blankData(), ...(isObj(root.data[p.id]) ? root.data[p.id] : {}) };
     this.root = root;
     this.listeners = new Set();
     this.save();
