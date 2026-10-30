@@ -1,5 +1,10 @@
 // Test helpers: the smallest browser stand-ins the app modules need under `node --test`.
 // Nothing here is loaded by the app itself.
+//
+// Run the unit tests from the repository root (Node 22+, no install needed):
+//   node --test "piano/tests/*.test.mjs"
+// Lint (ESLint 9, fetched by npx, nothing added to the repo):
+//   npx -y -p eslint@9 eslint -c piano/tests/eslint.config.js piano/js piano/tests
 
 /** localStorage replacement backed by a Map. */
 export class MemoryStorage {
