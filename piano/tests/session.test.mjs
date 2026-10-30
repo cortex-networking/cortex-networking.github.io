@@ -168,6 +168,18 @@ describe('tap mode', () => {
     for (const st of s.steps) press(s, 99, s.t0 + st.t * s.spb);
     assert.equal(s.stats.perfect, 3);
   });
+
+  test('a stray tap is early or late by the beat it was aiming for', () => {
+    const { s, coached } = setup({ rh: 'C4h D4h | E4w' }, { mode: 'tap' });
+    s.start();
+    press(s, 99, s.t0 + 0.4); // 0.4 s after beat 1, outside the window: late
+    assert.equal(coached.at(-1)[0], 'late');
+    press(s, 99, s.t0 + 1.6); // 0.4 s before beat 3: early
+    assert.equal(coached.at(-1)[0], 'early');
+    press(s, 99, s.t0 + 2); // on beat 3
+    press(s, 99, s.t0 + 2.5); // an extra tap after a good one is rushing toward the next beat
+    assert.equal(coached.at(-1)[0], 'early');
+  });
 });
 
 describe('wait mode', () => {

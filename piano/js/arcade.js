@@ -537,7 +537,8 @@ export class ArcadeBase extends GameBase {
 
   songHasHand(hand) {
     const def = this.songDef;
-    return !!def && !!String(hand === 'L' ? def.lh || '' : def.rh || '').replace(/[|\s]|r[whqes.]*/g, '').length;
+    // a note is a letter, optional accidentals, then an octave: rests, bar lines and dynamics don't count
+    return !!def && /[A-G][#b]*-?\d/.test(String(hand === 'L' ? def.lh || '' : def.rh || ''));
   }
 
   /** True when the current level (or the embedded round) teaches a song. */

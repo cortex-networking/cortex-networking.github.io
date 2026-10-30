@@ -132,3 +132,18 @@ describe('Hall of Fame', () => {
     assert.deepEqual(fameList(st, 'aliens'), []);
   });
 });
+
+describe('songHasHand', async () => {
+  const { ArcadeBase } = await import('../js/arcade.js');
+  const has = (def, hand) => ArcadeBase.prototype.songHasHand.call({ songDef: def }, hand);
+  test('notes count; rests, bar lines and dynamics do not', () => {
+    assert.equal(has({ rh: 'C4q D4', lh: '!mf rw | rw' }, 'L'), false);
+    assert.equal(has({ rh: 'C4q', lh: '!p rh F#3h' }, 'L'), true);
+    assert.equal(has({ rh: 'Bb4w' }, 'R'), true);
+    assert.equal(has({ rh: 'C4w' }, 'L'), false);
+    assert.equal(has(null, 'R'), false);
+  });
+  test('every song with a left hand still has one', () => {
+    for (const s of catalog.songs) if (s.lh) assert.equal(has(s, 'L'), true, s.id);
+  });
+});

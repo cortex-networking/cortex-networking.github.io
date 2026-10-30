@@ -231,7 +231,12 @@ export class Session {
       kb.flash(midi, 'miss', 450);
       if (resting && !due) { this.stats.rest++; this._coach('rest', { t: beat }); }
       else if (due && !tap) this._coach('wrong-pitch', { expected: due.midi, played: midi, t: due.t });
-      else this._coach(tap ? 'early' : 'missed', { t: beat, ms: 0 });
+      else if (tap) {
+        // early or late by the nearest beat still to be tapped (all beats when none are left)
+        const open = this.steps.filter((st) => !this.judged.has(`s${st.t}`));
+        const near = (open.length ? open : this.steps).reduce((a, st) => (Math.abs(st.t - beat) < Math.abs(a - beat) ? st.t : a), Infinity);
+        this._coach(beat < near ? 'early' : 'late', { t: beat, ms: 0 });
+      } else this._coach('missed', { t: beat, ms: 0 });
       this._update({ grade: resting ? 'rest' : 'wrong' });
       return;
     }
