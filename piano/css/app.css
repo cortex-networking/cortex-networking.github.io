@@ -540,3 +540,4 @@ details.more > summary { display: none; }
   .tabs { order: 0; width: auto; flex: 1 1 auto; max-width: 420px; }
   .tabs button { padding: 5px 8px; font-size: 14px; }
 }
+.card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
