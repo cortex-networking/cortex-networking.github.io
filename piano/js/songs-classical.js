@@ -114,7 +114,7 @@ export const SONGS_CLASSICAL = [
     id: 'ride-of-the-valkyries', title: 'Ride of the Valkyries (theme)', composer: 'Richard Wagner', year: 1856,
     level: 3, key: 'Bm', time: [9, 8], tempo: 100,
     tags: ['epic', 'classical', 'games'], style: 'epic',
-    chords: 'Bm | Bm | D/A | D | D | D | F#/C# | F# | Bm | Bm | D/A | D',
+    chords: 'Bm | Bm | D/A | D | D | D | F#m/C# | F# | Bm | Bm | D/A | D',
     blurb: 'Battle-maidens galloping through the storm: Wagner’s galloping horn call in B minor, three times, louder each time.',
     rh: '!mf B3e.:2 F#3s:1 B3e:2 D4q.:3 B3q.:2 | D4e.:3 B3s:1 D4e:3 F#4q.:5 D4q.:3 | F#4e.:3 D4s:1 F#4e:3 A4q.:5 A3q.:1 | D4e.:3 A3s:1 D4e:3 F#4h.:5 | !f D4e.:2 A3s:1 D4e:2 F#4q.:4 D4q.:2 | F#4e.:4 D4s:2 F#4e:4 A4q.:5 F#4q.:4 | A4e.:3 F#4s:1 A4e:3 C#5q.:5 C#4q.:1 | F#4e.:3 C#4s:1 F#4e:3 A#4h.:5 | !ff B3e.:2 F#3s:1 B3e:2 D4q.:3 B3q.:2 | D4e.:3 B3s:1 D4e:3 F#4q.:5 D4q.:3 | F#4e.:3 D4s:1 F#4e:3 A4q.:5 A3q.:1 | D4e.:3 A3s:1 D4e:3 F#4h.:5',
     lh: '!mf B2+D3q.:53 B2+D3q. B2+D3q. | B2+D3q. B2+D3q. B2+D3q. | A2+D3q.:52 A2+D3q. A2+D3q. | D2+A2q.:51 D2+A2q. D2+A2q. | !f D2+A2q. D2+A2q. D2+A2q. | D2+A2q. D2+A2q. D2+A2q. | C#3+F#3q.:52 C#3+F#3q. C#3+F#3q. | F#2+C#3q.:51 F#2+C#3q. F#2+C#3q. | !ff B2+D3q.:53 B2+D3q. B2+D3q. | B2+D3q. B2+D3q. B2+D3q. | A2+D3q.:52 A2+D3q. A2+D3q. | D2+A2q.:51 D2+A2q. D2+A2q.',
