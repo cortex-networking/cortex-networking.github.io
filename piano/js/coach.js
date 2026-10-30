@@ -66,6 +66,17 @@ function ducksStep(pool, text, extra = {}) {
   return { type: 'game', game: 'ducks', params: { pool, staves, count: 8, throws: 3, speed: 0.8, ...extra }, pass: 0.75, text };
 }
 
+/** Single-line phrase (top note of each right-hand chord, bottom of each left-hand one) for Aliens!. */
+function phraseOf(score, hand) {
+  const byT = new Map();
+  for (const n of score.notes || []) {
+    if ((n.hand || 'R') !== hand) continue;
+    const cur = byT.get(n.t);
+    if (!cur || (hand === 'R' ? n.midi > cur.midi : n.midi < cur.midi)) byT.set(n.t, n);
+  }
+  return [...byT.values()].sort((a, b) => a.t - b.t).slice(0, 7).map((n) => ({ midi: n.midi, finger: n.finger, hand }));
+}
+
 export class Coach {
   constructor(app) {
     this.app = app;
@@ -229,6 +240,10 @@ export class Coach {
       case 'neighbor': case 'missed': case 'chord': {
         if (usable) {
           steps.push({ type: 'seq', score: passage, staves, text: `Slowly, ${where} only. Look at each note before you play it, and use the finger numbers.` });
+          if (cat === 'neighbor') {
+            const phrase = phraseOf(passage, hands === 'L' ? 'L' : 'R');
+            if (phrase.length >= 3) steps.push({ type: 'game', game: 'aliens', params: { phrases: [phrase], count: 1, reps: 3 }, pass: 0.7, text: `Aliens! They play ${where}; copy them with the right fingers.` });
+          }
           steps.push({ type: 'seq', score: passage, staves, text: 'Once more, a little more smoothly.' });
           steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.7, text: 'Now in time, at a slower tempo.' });
         } else {

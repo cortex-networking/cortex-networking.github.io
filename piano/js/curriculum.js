@@ -147,6 +147,7 @@ export const LESSONS = [
       { type: 'pcs', pcs: [5], count: 3, distinct: true, text: 'Three different Fs: just to the left of the three black keys.' },
       { type: 'pcs', pcs: [7], count: 3, distinct: true, text: 'Three different Gs: between the first and second keys of the three black keys.' },
       { type: 'find', pool: C_POS, count: 10, show: 'name', text: 'Ten notes by name, as quickly as you can find them.' },
+      { type: 'game', game: 'aliens', params: { level: 0, count: 2 }, pass: 0.6, text: 'Aliens! They play a short tune in C position. Copy it with the fingers shown in their windows.' },
       { type: 'seq', rh: 'C4q:1 E4:3 D4:2 F4:4 | E4:3 G4:5 F4:4 E4:3 | D4:2 F4:4 E4:3 D4:2 | C4w:1', text: 'A finger pattern in C position: up a skip, back a step. Keep a steady, even touch.' },
       { type: 'rhythm', rh: 'C4q:1 E4:3 D4:2 F4:4 | E4:3 G4:5 F4:4 E4:3 | D4:2 F4:4 E4:3 D4:2 | C4w:1', tempo: 60, pass: 0.6, check: true, text: 'Check: the same pattern with a click track. After four count-in clicks, play one note on each click, and hold the last note for four clicks.' },
     ],
@@ -578,6 +579,7 @@ export const LESSONS = [
     staves: 'grand',
     steps: [
       { type: 'say', text: 'By the end of this review you’ll be able to read both staves at once and play a whole tune hands together, in time.' },
+      { type: 'game', game: 'aliens', params: { level: 6, count: 2 }, pass: 0.6, text: 'Aliens! The tune passes between your hands. Copy it, left hand on the bass staff and right hand on the treble.' },
       {
         type: 'quiz', text: 'Warm-up questions.',
         items: [

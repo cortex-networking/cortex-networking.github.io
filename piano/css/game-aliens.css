@@ -1,0 +1,99 @@
+/* Aliens! (js/game-aliens.js): the saucer, its tractor beam, the aliens and the phrase notes. */
+
+/* night sky over the felt */
+.al-star { fill: var(--chalk); opacity: 0.18; }
+.al-star.big { opacity: 0.32; }
+.al-star.t1, .al-star.t3 { animation: al-twinkle 3.4s ease-in-out infinite; }
+.al-star.t3 { animation-delay: -1.7s; animation-duration: 4.6s; }
+@keyframes al-twinkle { 0%, 100% { opacity: 0.08; } 50% { opacity: 0.42; } }
+
+/* the saucer (unit coordinates, scaled in JS) */
+.al-hull { fill: #dfe7df; }
+.al-hull-lo { fill: #aebfb3; }
+.al-rim { fill: none; stroke: rgba(8, 22, 17, 0.35); stroke-width: 0.05; }
+.al-deck { fill: #c3d0c6; stroke: rgba(8, 22, 17, 0.22); stroke-width: 0.04; }
+.al-dome { fill: rgba(143, 183, 222, 0.24); stroke: rgba(232, 237, 227, 0.75); stroke-width: 0.06; }
+.al-glint { fill: none; stroke: rgba(255, 255, 255, 0.6); stroke-width: 0.09; stroke-linecap: round; }
+.al-belly { fill: #8aa194; }
+.al-port { fill: #0c1914; }
+.al-hatch { fill: #5b7366; transition: fill 0.15s; }
+.al-ship.beaming .al-hatch { fill: #b6f3d2; }
+.al-antenna { stroke: #aebfb3; stroke-width: 0.07; stroke-linecap: round; }
+.al-tip { fill: var(--mint); }
+.al-tip-glow { fill: var(--mint); }
+.al-light { fill: #6e5d2d; }
+.al-light.on { fill: #ffd877; }
+
+/* finger windows */
+.al-win-glow { fill: #ffd877; opacity: 0; }
+.al-win-pane { fill: #13271f; stroke: #7d9387; stroke-width: 0.05; }
+.al-win-num { font-family: var(--sans); font-weight: 700; fill: rgba(232, 237, 227, 0.42); }
+.al-win.lit .al-win-pane { fill: #ffd877; stroke: #fff3c4; }
+.al-win.lit .al-win-num { fill: #1a1d1b; }
+.al-win.lit .al-win-glow { opacity: 0.5; }
+.al-win.lit.l .al-win-pane { fill: #b9d6f2; stroke: #e6f1fb; }
+.al-win.lit.l .al-win-glow { fill: var(--lh); }
+.al-win.party .al-win-pane { fill: #a8f0c8; stroke: #e2fbee; }
+.al-win.party .al-win-num { fill: #1a1d1b; }
+.al-win.party .al-win-glow { fill: var(--mint); opacity: 0.35; }
+.al-win.sad .al-win-pane { fill: #4a2a24; stroke: var(--coral); }
+.al-win.sad .al-win-num { fill: rgba(233, 112, 90, 0.75); }
+
+/* the pilot, behind the glass */
+.al-pilot-head { fill: #9edfb9; }
+.al-pilot-ant { stroke: #9edfb9; stroke-width: 0.07; stroke-linecap: round; }
+.al-pilot-tip { fill: #ffd877; }
+.al-eye { fill: #fbfbf6; }
+.al-pupil { fill: #1a1d1b; }
+.al-mouth { fill: none; stroke: #1a1d1b; stroke-width: 0.06; stroke-linecap: round; }
+.al-mouth.open { fill: #1a1d1b; }
+
+/* the tractor beam */
+.al-beam-poly { fill: url(#al-beam-grad); }
+.al-beam-glow { fill: #a8f0c8; opacity: 0.3; }
+.al-beam-ring { fill: none; stroke: #d2f7e3; stroke-width: 1.2; }
+.al-ring { fill: none; stroke: #a8f0c8; stroke-width: 1.5; }
+
+/* the phrase on the staff */
+.al-note .ar-glyph { fill: var(--chalk); }
+.al-note .al-stem { stroke: var(--chalk); }
+.al-note.lh .ar-glyph { fill: var(--lh); }
+.al-note.lh .al-stem { stroke: var(--lh); }
+.al-note.hit .ar-glyph { fill: var(--mint); }
+.al-note.hit .al-stem { stroke: var(--mint); }
+.al-note.hit .ar-ledger { stroke: var(--mint); }
+.al-note.dim { opacity: 0.26; }
+.al-note.late .ar-glyph { fill: var(--brass); }
+.al-note.late .al-stem { stroke: var(--brass); }
+.al-ghost .ar-glyph { fill: var(--coral); }
+.al-ghost .ar-ledger { stroke: var(--coral); }
+.al-ghost-label { font-family: var(--sans); font-weight: 600; fill: var(--coral); paint-order: stroke; stroke: var(--felt); stroke-width: 3px; }
+
+/* cues */
+.al-tri { fill: var(--coral); }
+.al-bar-track { fill: rgba(232, 237, 227, 0.1); }
+.al-bar-fill { fill: var(--coral); }
+.al-bar.low .al-bar-fill { animation: al-pulse 0.42s ease-in-out infinite alternate; }
+@keyframes al-pulse { from { opacity: 1; } to { opacity: 0.45; } }
+.al-banner-t { font-family: var(--sans); font-weight: 700; letter-spacing: 0.18em; fill: var(--brass); paint-order: stroke; stroke: var(--felt); stroke-width: 4px; }
+.al-bonus { fill: var(--mint); }
+.al-pip { fill: none; stroke: var(--chalk-2); stroke-width: 1.5; }
+.al-pip.cur { fill: var(--brass); stroke: var(--brass); }
+.al-pip.done { fill: var(--mint); stroke: var(--mint); }
+
+/* the aliens (unit coordinates) */
+.al-alien-ant { fill: none; stroke-width: 0.09; stroke-linecap: round; }
+.al-alien-tip { fill: #ffd877; }
+.al-alien-arm { fill: none; stroke-width: 0.17; stroke-linecap: round; }
+.al-alien-body { stroke: rgba(0, 0, 0, 0.2); stroke-width: 0.04; }
+.al-alien-belly { fill: rgba(255, 255, 255, 0.3); }
+.al-alien-eye { fill: #fbfbf6; }
+.al-alien-pupil { fill: #1a1d1b; }
+.al-alien-cheek { fill: #e9705a; opacity: 0.4; }
+.al-alien-mouth { fill: none; stroke: #1a1d1b; stroke-width: 0.07; stroke-linecap: round; }
+.al-alien-foot { stroke: rgba(0, 0, 0, 0.2); stroke-width: 0.03; }
+
+@media (prefers-reduced-motion: reduce) {
+  .al-star.t1, .al-star.t3, .al-bar.low .al-bar-fill { animation: none; }
+  .al-spark { display: none; }
+}
