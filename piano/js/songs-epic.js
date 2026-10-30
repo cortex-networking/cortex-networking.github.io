@@ -33,7 +33,7 @@ export const SONGS_EPIC = [
   },
   {
     id: 'night-on-bald-mountain', title: 'Night on Bald Mountain (brass theme)', composer: 'Modest Mussorgsky, arr. Rimsky-Korsakov', year: 1886,
-    level: 3, key: 'Dm', time: [4, 4], tempo: 120,
+    level: 4, key: 'Dm', time: [4, 4], tempo: 120,
     tags: ['epic', 'classical', 'games'], style: 'epic',
     blurb: 'Witches gather on a mountain at midnight: the right hand shivers on two notes while the left hand stomps out the brass theme, the one an animated film made famous.',
     chords: 'Dm | F | E | E:2 Dm:2 | Am/E:2 F:2 | G#dim7 | G#dim7:2 F/A:2 | Am/C | Am/C | Dm/C | Dm/C | Gm/Bb',
@@ -162,7 +162,7 @@ export const SONGS_EPIC = [
   },
   {
     id: 'zarathustra', title: 'Also sprach Zarathustra (sunrise)', composer: 'Richard Strauss', year: 1896,
-    level: 2, key: 'C', time: [4, 4], tempo: 60,
+    level: 3, key: 'C', time: [4, 4], tempo: 60,
     tags: ['epic', 'classical', 'games'], style: 'classical',
     blurb: 'The sunrise fanfare made famous by a 1968 space film: a low rumble, three rising trumpet notes, then a chord that flips from major to minor, and the second time from minor to major.',
     chords: 'C5 | C5 | C5 | C5 | Cm | Cm | C5 | C5 | C',
@@ -171,7 +171,7 @@ export const SONGS_EPIC = [
   },
   {
     id: 'hungarian-dance-5', title: 'Hungarian Dance No. 5', composer: 'Johannes Brahms', year: 1869,
-    level: 3, key: 'Gm', time: [2, 4], tempo: 100,
+    level: 4, key: 'Gm', time: [2, 4], tempo: 100,
     tags: ['classical', 'games'], style: 'march',
     blurb: 'Brahms’s fiery dance in G minor, a favourite of cartoons and comedy chases: a long-short swagger, then a whirl of sixteenths.',
     chords: 'Gm | Gm | Cm/G | Gm | Cm/G | Gm | D7/F# | Gm | Gm | Gm | Cm/G | Gm | Eb/G:1 Dm/F:1 | Cm/Eb:1 Bb/D:1 | D7 | Gm',
@@ -224,7 +224,7 @@ export const SONGS_EPIC = [
   },
   {
     id: 'william-tell-finale', title: 'William Tell Overture (finale)', composer: 'Gioachino Rossini', year: 1829,
-    level: 3, key: 'E', time: [2, 4], tempo: 108, pickup: 0.5,
+    level: 4, key: 'E', time: [2, 4], tempo: 108, pickup: 0.5,
     tags: ['classical', 'games', 'march'], style: 'march',
     blurb: 'The cavalry charge that ends an opera overture, famous as a TV cowboy theme: a galloping da-da-dum rhythm, then the whole tune again.',
     chords: 'E | E | E | B7 | E | E | B7 | E | E | E | E | B7 | E | E | B7 | E',

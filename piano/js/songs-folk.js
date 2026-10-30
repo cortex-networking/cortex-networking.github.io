@@ -88,9 +88,9 @@ export const SONGS_FOLK = [
   {
     id: 'korobeiniki', title: 'Korobeiniki', composer: 'Traditional (Russia)', year: 1861,
     level: 3, key: 'Am', time: [4, 4], tempo: 116, tags: ['games', 'folk'], style: 'rock',
-    blurb: 'The Russian peddlers’ song the whole world knows from a falling-blocks video game: a minor-key tune that never stops moving.',
+    blurb: 'The Russian peddlers’ song in its folk form, with the dotted rhythm it was sung to. A falling-blocks video game later made a faster variant world-famous.',
     chords: 'E | Am | E | Am | Dm | Am | E | Am | E | Am | E | Am | Dm | Am | E | Am',
-    rh: '!mf E5q:5 B4e:2 C5e:3 D5q:4 C5e:3 B4e:2 | A4q:1 A4e:1 C5e:3 E5q:5 D5e:4 C5e:3 | B4q.:2 C5e:3 D5q:4 E5q:5 | C5q:3 A4q:1 A4h:1 | D5q.:2 F5e:3 A5q:5 G5e:4 F5e:3 | E5q.:2 C5e:1 E5q:3 D5e:2 C5e:1 | B4q:1 B4e:1 C5e:2 D5q:3 E5q:4 | C5q:2 A4q:1 A4h:1 | !f E5q:5 B4e:2 C5e:3 D5q:4 C5e:3 B4e:2 | A4q:1 A4e:1 C5e:3 E5q:5 D5e:4 C5e:3 | B4q.:2 C5e:3 D5q:4 E5q:5 | C5q:3 A4q:1 A4h:1 | D5q.:2 F5e:3 A5q:5 G5e:4 F5e:3 | E5q.:2 C5e:1 E5q:3 D5e:2 C5e:1 | B4q:1 B4e:1 C5e:2 D5q:3 E5q:4 | C5q:2 A4q:1 A4h:1',
+    rh: '!mf E4q.:1 G#4e:3 B4q:5 G#4e:3 E4e:1 | A4q.:1 C5e:2 E5q:5 D5e:4 C5e:3 | B4q.:2 C5e:3 D5q:4 E5q:5 | C5q:3 A4q:1 A4h:1 | F5q.:3 G5e:4 A5q:5 G5e:4 F5e:3 | E5q.:2 F5e:3 E5q:2 D5e:1 C5e:2 | B4q.:1 C5e:2 D5q:3 E5q:4 | C5q:2 A4q:1 A4h:1 | !f E4q.:1 G#4e:3 B4q:5 G#4e:3 E4e:1 | A4q.:1 C5e:2 E5q:5 D5e:4 C5e:3 | B4q.:2 C5e:3 D5q:4 E5q:5 | C5q:3 A4q:1 A4h:1 | F5q.:3 G5e:4 A5q:5 G5e:4 F5e:3 | E5q.:2 F5e:3 E5q:2 D5e:1 C5e:2 | B4q.:1 C5e:2 D5q:3 E5q:4 | C5q:2 A4q:1 A4h:1',
     lh: 'E2q:5 E3:1 E2 E3 | A2:5 A3:1 A2 A3 | E2:5 E3:1 E2 E3 | A2:5 A3:1 A2 A3 | D2:5 D3:1 D2 D3 | A2:5 A3:1 A2 A3 | E2:5 E3:1 E2 E3 | A2h:5 A2h | E2e:5 E3:1 E2 E3 E2 E3 E2 E3 | A2:5 A3:1 A2 A3 A2 A3 A2 A3 | E2:5 E3:1 E2 E3 E2 E3 E2 E3 | A2:5 A3:1 A2 A3 A2 A3 A2 A3 | D2:5 D3:1 D2 D3 D2 D3 D2 D3 | A2:5 A3:1 A2 A3 A2 A3 A2 A3 | E2:5 E3:1 E2 E3 E2 E3 E2 E3 | A2h:5 A2h',
   },
   {
@@ -150,7 +150,7 @@ export const SONGS_FOLK = [
     lh: 'rh. | rh. | rh. | rh. | !mp D3h.:1 | C3h.:2 | Bb2h.:3 | A2h.:4 | !mf Bb2+D3h.:31 | F2+C3h.:51 | G2+Bb2h.:42 | D2+A2h.:51 | F3q:1 E3e:2 F3e:1 D3q:3 | F3q E3e F3e D3q | F3q E3e F3e D3q | F3q E3e F3e D3q | !f F3q:1 E3e:2 F3e:1 D3q:3 | F3q E3e F3e D3q | F3q E3e F3e D3q | F3q E3e F3e D3q | !mf A2+E3h.:51 | A2+G3h.:51 | A2+E3h.:51 | A2+G3h:51 Bb2q:4 | !mp C3h.:1 | Bb2h.:2 | A2h.:3 | G2h.:4 | !p F3q:1 E3e:2 F3e:1 D3q:3 | F3q E3e F3e D3q | F3q E3e F3e D3q | D3h.:3',
   },
   {
-    id: 'kalinka', title: 'Kalinka', composer: 'Ivan Larionov', year: 1860, level: 2, key: 'Dm', time: [2, 4], tempo: 104, pickup: 1,
+    id: 'kalinka', title: 'Kalinka', composer: 'Ivan Larionov', year: 1860, level: 3, key: 'Dm', time: [2, 4], tempo: 104, pickup: 1,
     tags: ['folk'], style: 'folk',
     chords: 'A7 | A7 | A7 | Dm | A7 | A7 | A7 | Dm | A7 | A7 | A7 | Dm | A7 | A7 | A7 | Dm',
     blurb: 'The Russian dance-song chorus that singers traditionally speed up each time round; your right hand never leaves five neighbouring keys.',
