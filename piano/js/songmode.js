@@ -49,11 +49,12 @@ export class SongMode {
     this.song = song;
     this.score = buildScore(song);
     const saved = app.store.data.songOpts || {};
+    const tempo = +saved.tempo;
     this.opts = {
-      mode: saved.mode || 'wait',
-      hands: saved.hands || 'R',
+      mode: ['wait', 'play', 'tap', 'listen'].includes(saved.mode) ? saved.mode : 'wait',
+      hands: ['R', 'L', 'B'].includes(saved.hands) ? saved.hands : 'R',
       accompany: saved.accompany ?? true,
-      tempo: saved.tempo || 1,
+      tempo: Number.isFinite(tempo) && tempo > 0 ? Math.min(1.3, Math.max(0.4, tempo)) : 1,
       metronome: saved.metronome ?? true,
     };
     if (this.opts.hands === 'B' ? !(this.score.hands.R && this.score.hands.L) : !this.score.hands[this.opts.hands]) this.opts.hands = this.score.hands.R ? 'R' : 'L';

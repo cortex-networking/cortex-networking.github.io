@@ -74,6 +74,9 @@ class App {
     this.keyboard.fit(true);
     this.staff = new Staff($('#staff'));
     this.ui = new UI();
+    const unsaved = () => this.ui.toast('This browser isn’t saving your progress (its storage is full or blocked). You can keep playing, but stars and scores will be gone when you close the page.', 9000);
+    this.store.onSaveFail = unsaved;
+    if (this.store.saveFailed) setTimeout(unsaved, 1500);
     this.coach = new Coach(this);
     this.ctrl = null;
     this.tab = 'learn';

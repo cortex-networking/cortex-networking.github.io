@@ -26,25 +26,77 @@ function read(key) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; }
 }
 
+// ---------- repair what was read: old versions, hand edits and half-broken saves must not stop the app ----------
+const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+const obj = (v) => (isObj(v) ? v : {});
+const ENUMS = {
+  instrument: ['grand', 'epiano', 'organ'], labels: ['none', 'c', 'all'],
+  range: ['auto', '25', '37', '49', '61', '76', '88'],
+};
+const RANGES = { volume: [0, 1], bandVolume: [0, 1], latency: [0, 500] };
+
+function cleanSettings(raw) {
+  const s = { ...DEFAULT_SETTINGS };
+  for (const [k, v] of Object.entries(obj(raw))) {
+    if (!(k in DEFAULT_SETTINGS)) { s[k] = v; continue; }
+    if (typeof v !== typeof DEFAULT_SETTINGS[k]) continue;
+    if (typeof v === 'number' && !Number.isFinite(v)) continue;
+    if (ENUMS[k] && !ENUMS[k].includes(v)) continue;
+    s[k] = RANGES[k] ? Math.min(RANGES[k][1], Math.max(RANGES[k][0], v)) : v;
+  }
+  return s;
+}
+
+function cleanData(raw) {
+  const d = { ...blankData(), ...obj(raw) };
+  for (const k of ['lessons', 'songs', 'games', 'practice', 'certs']) d[k] = obj(d[k]);
+  if (d.coach !== null) {
+    if (!isObj(d.coach)) d.coach = null;
+    else for (const k of ['cats', 'skills', 'contexts', 'confusions', 'quiz']) d.coach[k] = obj(d.coach[k]);
+  }
+  for (const k of ['songOpts', 'gameLevel', 'gameHand', 'gameSong', 'songPaths', 'jukebox']) if (k in d && !isObj(d[k])) delete d[k];
+  return d;
+}
+
+function cleanHall(raw) {
+  const hall = {};
+  for (const [id, list] of Object.entries(obj(raw))) {
+    if (!Array.isArray(list)) continue;
+    hall[id] = list.filter((e) => isObj(e) && Number.isFinite(+e.score))
+      .map((e) => ({ ...e, score: +e.score, name: typeof e.name === 'string' && e.name ? e.name : 'Player' }));
+  }
+  return hall;
+}
+
+/** A root object the rest of the app can trust, or null when nothing usable was stored. */
+function normalize(root) {
+  if (!isObj(root)) return null;
+  const profiles = (Array.isArray(root.profiles) ? root.profiles : [])
+    .filter((p) => isObj(p) && typeof p.id === 'string' && p.id)
+    .map((p) => ({ ...p, name: typeof p.name === 'string' && p.name.trim() ? p.name : 'Player 1', interests: Array.isArray(p.interests) ? p.interests.filter((x) => typeof x === 'string') : [] }));
+  const data = obj(root.data);
+  return { ...root, settings: cleanSettings(root.settings), profiles, data, hall: cleanHall(root.hall) };
+}
+
 export class Store {
   constructor() {
-    let root = read(KEY);
+    let root = normalize(read(KEY));
     if (!root) {
-      const old = read(OLD);
+      const old = obj(read(OLD));
       const id = uid();
       root = { settings: {}, profiles: [{ id, name: 'Player 1', interests: [], created: Date.now() }], current: id, data: { [id]: blankData() } };
-      if (old) {
+      if (Object.keys(old).length) {
         root.settings = old.settings || {};
         const d = root.data[id];
         // old lesson ids (l1…) are kept; the new course ignores unknown ids
         Object.assign(d, { lessons: old.lessons || {}, songs: old.songs || {}, games: old.games || {} });
         for (const k of ['songOpts', 'gameLevel', 'freeBpm']) if (old[k] !== undefined) d[k] = old[k];
       }
+      root = normalize(root);
     }
-    root.settings = { ...DEFAULT_SETTINGS, ...root.settings };
-    if (!root.profiles?.length) { const id = uid(); root.profiles = [{ id, name: 'Player 1', interests: [], created: Date.now() }]; root.current = id; }
+    if (!root.profiles.length) { const id = uid(); root.profiles = [{ id, name: 'Player 1', interests: [], created: Date.now() }]; root.current = id; }
     if (!root.profiles.some((p) => p.id === root.current)) root.current = root.profiles[0].id;
-    for (const p of root.profiles) root.data[p.id] = { ...blankData(), ...(root.data[p.id] || {}) };
+    for (const p of root.profiles) root.data[p.id] = cleanData(root.data[p.id]);
     this.root = root;
     this.listeners = new Set();
     this.save();
@@ -57,7 +109,11 @@ export class Store {
 
   onChange(fn) { this.listeners.add(fn); }
   save() {
-    try { localStorage.setItem(KEY, JSON.stringify(this.root)); } catch { /* storage full or unavailable */ }
+    try { localStorage.setItem(KEY, JSON.stringify(this.root)); this.saveFailed = false; } catch {
+      // storage full or unavailable: keep going in memory, and say so once
+      if (!this.saveFailed && !this.warnedSave) { this.warnedSave = true; this.onSaveFail?.(); }
+      this.saveFailed = true;
+    }
   }
 
   // ---------- profiles ----------
