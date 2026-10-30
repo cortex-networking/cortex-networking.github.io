@@ -22,9 +22,15 @@ Live at `/piano/`. Static files, no build step, no tracking, no accounts.
   generated from each song's chord chart in one of eleven styles.
 - **Arcade**: games modelled on the Miracle's: Ducks (the shooting gallery, for reading notes),
   Ripchord (chords against the clock), Aliens! (copy the aliens' phrase, for fingering and memory)
-  and Roboman (rhythm: hold notes to build bridges). A shared Hall of Fame lists the top scores of
-  everyone on the device. The coach and the review lessons drop into short rounds of the matching
-  game. Flashcards cover theory.
+  and Roboman (rhythm: hold notes to build bridges). Every game also has a song mode that teaches
+  a real song: Ducks swims its melody in order, Aliens! teaches it phrase by phrase and chains the
+  phrases together, Roboman rolls through its rhythm, Ripchord drills its chords. A shared Hall of
+  Fame lists the top scores of everyone on the device. Flashcards cover theory.
+- **Learn it with games**: every song page has a path that teaches that song through the games
+  (rhythm, notes, phrases, left hand, chords) and ends with playing it with the band. The coach
+  and the course drop into the same games when they spot a weakness.
+- **Jukebox**: as in the original, every song with the full band, one after another, by
+  collection or shuffled.
 - **Free play**: live grand staff plus chord and interval names, metronome.
 - **Profiles**: several learners on one device, each with their own progress, interests,
   practice streak and 14-day practice chart.
@@ -57,7 +63,8 @@ Progress is saved in the browser's local storage only.
 - `js/home.js` Learn home, progress page, certificates
 - `js/arcade.js` arcade kit (stage, sound effects, Hall of Fame); `js/game-*.js` the four games;
   `js/arcade-games.js` registry
-- `js/songmode.js`, `js/modes.js`, `js/gamebase.js`, `js/games-extra.js` songs, free play, Flashcards
+- `js/songmode.js` (with the Learn-it-with-games path), `js/jukebox.js`, `js/modes.js`, `js/gamebase.js`,
+  `js/games-extra.js` songs, Jukebox, free play, Flashcards
 - `js/store.js` profiles and local storage; `js/app.js` shell, routing, settings
 - `fonts/notation-subset.woff2` a subset of Bravura (SIL OFL), renamed per the license
 
