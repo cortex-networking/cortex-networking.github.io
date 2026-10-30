@@ -223,7 +223,9 @@ export class Session {
     const kb = this.app.keyboard;
     if (!best) {
       const beat = (tIn - lat - this.t0) / this.spb;
-      const resting = this.score.events.some((e) => e.rest && (this.o.hands === 'B' || e.hand === this.o.hands) && beat >= e.t - 0.05 && beat < e.t + e.d - 0.1);
+      // a rest mistake only when every hand being practised is resting (not while the other one holds a note)
+      const restIn = (h) => this.score.events.some((e) => e.rest && e.hand === h && beat >= e.t - 0.05 && beat < e.t + e.d - 0.1);
+      const resting = (this.o.hands === 'B' ? ['R', 'L'] : [this.o.hands]).every(restIn);
       const due = this.practice.find((n) => !this.judged.has(n.i) && Math.abs(n.t - beat) < 0.5);
       this.stats.wrong++;
       kb.flash(midi, 'miss', 450);
