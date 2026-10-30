@@ -10,7 +10,7 @@ import { catalog, COLLECTIONS } from './catalog.js';
 import { LessonMode, PracticeMode, lessonUnlocked, resolveRef } from './lesson.js';
 import { SongMode } from './songmode.js';
 import { HomeMode, ProgressMode, nextLesson, showCertificate } from './home.js';
-import { FreeMode, GAME_CLASSES } from './modes.js';
+import { FreeMode } from './modes.js';
 
 const $ = (s) => document.querySelector(s);
 const TABS = ['learn', 'songs', 'games', 'free'];
@@ -76,7 +76,7 @@ class App {
     this.coach = new Coach(this);
     this.ctrl = null;
     this.tab = 'learn';
-    this.extras = { games: null };
+    this.extras = { games: null, arcade: null };
     this._wire();
     this.input.attachComputerKeyboard();
     this.input.autoConnect();
@@ -103,11 +103,10 @@ class App {
   get settings() { return this.store.settings; }
 
   async _loadExtras() {
-    try {
-      const m = await import('./games-extra.js');
-      this.extras.games = m;
-      if (m.GAMES_EXTRA) catalog.set({ games: [...catalog.games, ...m.GAMES_EXTRA.filter((g) => !catalog.games.some((x) => x.id === g.id))] });
-    } catch { /* optional */ }
+    try { this.extras.arcade = await (await import('./arcade-games.js')).loadArcade(); } catch (err) { console.error(err); }
+    try { this.extras.games = await import('./games-extra.js'); } catch { /* optional */ }
+    const flash = (this.extras.games?.GAMES_EXTRA || []).filter((g) => g.id === 'quiz');
+    catalog.set({ games: [...(this.extras.arcade?.ARCADE_GAMES || []), ...flash] });
     if (this.tab === 'games') this.route(); else this.renderList();
   }
 
@@ -193,10 +192,17 @@ class App {
       this.current = song.id;
       ctrl = new SongMode(this, song);
     } else if (t === 'games') {
-      const game = catalog.games.find((g) => g.id === id) || catalog.games[0];
-      this.current = game.id;
-      const C = GAME_CLASSES[game.id] || this.extras.games?.GAME_CLASSES_EXTRA?.[game.id];
-      ctrl = C ? new C(this, game) : new HomeMode(this);
+      if (id === 'fame' && this.extras.arcade) {
+        this.current = 'fame';
+        const ids = Object.keys(this.extras.arcade.ARCADE_CLASSES);
+        ctrl = new this.extras.arcade.FameMode(this, catalog.games.filter((g) => ids.includes(g.id)));
+      }
+      const game = ctrl ? null : catalog.games.find((g) => g.id === id) || catalog.games[0];
+      if (!ctrl) {
+        this.current = game?.id;
+        const C = game && (this.extras.arcade?.ARCADE_CLASSES?.[game.id] || this.extras.games?.GAME_CLASSES_EXTRA?.[game.id]);
+        ctrl = C ? new C(this, game) : new HomeMode(this);
+      }
     } else {
       ctrl = new FreeMode(this);
     }
@@ -286,11 +292,18 @@ class App {
       list.append(search, body);
       draw();
     } else if (this.tab === 'games') {
-      list.append(h('section', { class: 'group' }, h('h2', {}, 'Games'),
-        ...catalog.games.map((g) => {
-          const best = this.store.bestGame(g.id);
-          return item('games', g.id, g.title, g.summary, best ? `Best ${best}` : null);
-        })));
+      const arcadeIds = Object.keys(this.extras.arcade?.ARCADE_CLASSES || {});
+      const row = (g) => {
+        const best = this.store.bestGame(g.id);
+        return item('games', g.id, g.title, g.summary, best ? `Best ${best.toLocaleString()}` : null);
+      };
+      const arcade = catalog.games.filter((g) => arcadeIds.includes(g.id));
+      const other = catalog.games.filter((g) => !arcadeIds.includes(g.id));
+      if (arcade.length) {
+        list.append(h('section', { class: 'group' }, h('h2', {}, 'Arcade'), ...arcade.map(row),
+          item('games', 'fame', 'Hall of Fame', 'Top scores for everyone who plays on this device.')));
+      }
+      if (other.length) list.append(h('section', { class: 'group' }, h('h2', {}, 'Review'), ...other.map(row)));
     } else {
       list.append(h('section', { class: 'group help' },
         h('h2', {}, 'No keyboard plugged in?'),

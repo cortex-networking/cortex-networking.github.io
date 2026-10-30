@@ -20,8 +20,11 @@ Live at `/piano/`. Static files, no build step, no tracking, no accounts.
   Wait mode, play-along (graded on timing), rhythm-only tapping and listen; right, left or
   both hands; the app can play the other hand. A backing band (bass, drums, pads, chords) is
   generated from each song's chord chart in one of eleven styles.
-- **Games**: Note Rush (staff reading), Echo (ear training), Key Hunt (keyboard geography),
-  Stepping Stones (rhythm), Chord Stars (chords) and Flashcards (theory).
+- **Arcade**: games modelled on the Miracle's: Ducks (the shooting gallery, for reading notes),
+  Ripchord (chords against the clock), Aliens! (copy the aliens' phrase, for fingering and memory)
+  and Roboman (rhythm: hold notes to build bridges). A shared Hall of Fame lists the top scores of
+  everyone on the device. The coach and the review lessons drop into short rounds of the matching
+  game. Flashcards cover theory.
 - **Free play**: live grand staff plus chord and interval names, metronome.
 - **Profiles**: several learners on one device, each with their own progress, interests,
   practice streak and 14-day practice chart.
@@ -41,7 +44,7 @@ Progress is saved in the browser's local storage only.
 
 ## Files
 
-- `index.html`, `css/app.css`, `css/games.css`
+- `index.html`, `css/app.css`, `css/games.css`, `css/arcade.css`, `css/game-*.css`
 - `js/theory.js` note spelling, voice parser, chord names
 - `js/staff.js` SVG grand staff (beams, ties, dynamics, key signatures, fingerings)
 - `js/audio.js` sampled piano, synth voices, drum kit, MIDI-out routing
@@ -52,7 +55,9 @@ Progress is saved in the browser's local storage only.
 - `js/curriculum.js` chapters and lessons; `js/lesson.js` lesson runner and mastery gates
 - `js/songs-*.js`, `js/library.js` songs; `js/catalog.js` joins songs, lessons and games
 - `js/home.js` Learn home, progress page, certificates
-- `js/songmode.js`, `js/modes.js`, `js/gamebase.js`, `js/games-extra.js` songs and games
+- `js/arcade.js` arcade kit (stage, sound effects, Hall of Fame); `js/game-*.js` the four games;
+  `js/arcade-games.js` registry
+- `js/songmode.js`, `js/modes.js`, `js/gamebase.js`, `js/games-extra.js` songs, free play, Flashcards
 - `js/store.js` profiles and local storage; `js/app.js` shell, routing, settings
 - `fonts/notation-subset.woff2` a subset of Bravura (SIL OFL), renamed per the license
 

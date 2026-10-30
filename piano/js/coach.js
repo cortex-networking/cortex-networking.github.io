@@ -59,6 +59,37 @@ export function barOf(score, t) {
   return n;
 }
 
+/** A short Ducks round (shooting gallery) on a set of notes, for reading practice. */
+function ducksStep(pool, text, extra = {}) {
+  const lo = Math.min(...pool), hi = Math.max(...pool);
+  const staves = lo >= 57 ? 'treble' : hi <= 64 ? 'bass' : 'grand';
+  return { type: 'game', game: 'ducks', params: { pool, staves, count: 8, throws: 3, speed: 0.8, ...extra }, pass: 0.75, text };
+}
+
+/** The distinct chords (two or more notes struck together) in one hand of a passage. */
+function chordsOf(score, hand) {
+  const byT = new Map();
+  for (const n of score.notes || []) if ((n.hand || 'R') === hand) (byT.get(n.t) || byT.set(n.t, []).get(n.t)).push(n.midi);
+  const seen = new Set(), out = [];
+  for (const ms of byT.values()) {
+    if (ms.length < 2) continue;
+    const k = [...ms].sort((a, b) => a - b).join(',');
+    if (!seen.has(k)) { seen.add(k); out.push(k.split(',').map(Number)); }
+  }
+  return out;
+}
+
+/** Single-line phrase (top note of each right-hand chord, bottom of each left-hand one) for Aliens!. */
+function phraseOf(score, hand) {
+  const byT = new Map();
+  for (const n of score.notes || []) {
+    if ((n.hand || 'R') !== hand) continue;
+    const cur = byT.get(n.t);
+    if (!cur || (hand === 'R' ? n.midi > cur.midi : n.midi < cur.midi)) byT.set(n.t, n);
+  }
+  return [...byT.values()].sort((a, b) => a.t - b.t).slice(0, 7).map((n) => ({ midi: n.midi, finger: n.finger, hand }));
+}
+
 export class Coach {
   constructor(app) {
     this.app = app;
@@ -204,6 +235,7 @@ export class Coach {
           if (cat === 'octave') steps.push({ type: 'say', text: 'The same letter repeats every eight white keys. Find the exact one: its height on the staff tells you which octave, and ledger lines count as extra staff lines.' });
           steps.push({ type: 'find', notes: expected.length ? expected : pool.slice(0, 3), show: 'both', key, text: 'Watch where each one sits, then play it.' });
           steps.push({ type: 'find', pool, count: 8, show: 'staff', key, text: 'Now from the staff alone.' });
+          steps.push(ducksStep(pool, 'Shooting gallery: the ducks are swimming on these same notes.'));
         }
         break;
       }
@@ -215,11 +247,20 @@ export class Coach {
         if (passage) passage.notes.filter((n) => isBlack(n.midi)).forEach((n) => pool.add(n.midi));
         if (pool.size < 2) [61, 63, 66, 68, 70].forEach((m) => pool.add(m));
         steps.push({ type: 'find', pool: [...pool], count: 8, show: 'staff', key, text: 'Read each note, sharps and flats included.' });
+        steps.push(ducksStep([...pool], 'Shooting gallery with sharps and flats.', { accidentals: true }));
         break;
       }
       case 'neighbor': case 'missed': case 'chord': {
         if (usable) {
           steps.push({ type: 'seq', score: passage, staves, text: `Slowly, ${where} only. Look at each note before you play it, and use the finger numbers.` });
+          if (cat === 'chord') {
+            const chords = chordsOf(passage, hands === 'L' ? 'L' : 'R');
+            if (chords.length) steps.push({ type: 'game', game: 'ripchord', params: { chords, count: Math.min(8, Math.max(4, chords.length * 2)), time: 9, names: true }, pass: 0.7, text: `Ripchord: the chords from ${where}. Hold every note of each chord down together.` });
+          }
+          if (cat === 'neighbor') {
+            const phrase = phraseOf(passage, hands === 'L' ? 'L' : 'R');
+            if (phrase.length >= 3) steps.push({ type: 'game', game: 'aliens', params: { phrases: [phrase], count: 1, reps: 3 }, pass: 0.7, text: `Aliens! They play ${where}; copy them with the right fingers.` });
+          }
           steps.push({ type: 'seq', score: passage, staves, text: 'Once more, a little more smoothly.' });
           steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.7, text: 'Now in time, at a slower tempo.' });
         } else {
@@ -231,6 +272,9 @@ export class Coach {
         steps.push({ type: 'say', text: cat === 'early'
           ? 'Rushing usually means the hands move before the beat arrives. Listen for the click and let it land first, then play.'
           : 'Dragging usually comes from looking for the next note too late. Look one note ahead while you play.' });
+        steps.push(usable
+          ? { type: 'game', game: 'roboman', params: { score: passage, hands: hands === 'L' ? 'L' : 'R' }, pass: 0.7, text: `Roboman: the rhythm of ${where}. Tap the short notes, hold the long ones, right on the click.` }
+          : { type: 'game', game: 'roboman', params: { level: 0, bars: 4 }, pass: 0.7, text: 'Roboman: tap the short notes and hold the long ones, right on the click.' });
         if (usable) {
           steps.push({ type: 'tap', score: passage, tempoScale: 0.75, text: `Tap the rhythm of ${where} on any key. Only the timing counts.` });
           steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.8, text: 'Now with the real notes, still a little slower.' });
@@ -241,6 +285,7 @@ export class Coach {
       }
       case 'short': {
         steps.push({ type: 'say', text: 'Long notes need their full value. Keep the key down and count through the note: a half note is “one, two”, a whole note “one, two, three, four”.' });
+        steps.push({ type: 'game', game: 'roboman', params: { rhythm: 'C4h C4h | C4w | C4q C4q C4h | C4w', tempo: 72 }, pass: 0.7, text: 'Roboman: hold each long note until its bridge reaches the other side.' });
         steps.push({ type: 'rhythm', rh: 'C4w | E4h G4h | E4h. rq | C4w', tempo: 72, text: 'Hold each note right up to the next one.' });
         if (usable) steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.8, text: `Now ${where}, holding every long note.` });
         break;
@@ -248,6 +293,7 @@ export class Coach {
       case 'rest': {
         steps.push({ type: 'say', text: 'A rest is silence you count. Lift your hand off the keys during a rest and keep counting in your head.' });
         steps.push({ type: 'tap', rh: 'B4q rq B4q rq | B4h rh | B4q B4 rh | B4w', tempo: 76, text: 'Tap the notes and stay silent through the rests.' });
+        steps.push({ type: 'game', game: 'roboman', params: { level: 1, bars: 4 }, pass: 0.7, text: 'Roboman: in the rests the floor is solid. Keep your hands still and let him roll.' });
         if (usable) steps.push({ type: 'tap', score: passage, tempoScale: 0.8, text: `The rhythm of ${where}, rests included.` });
         break;
       }

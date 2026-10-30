@@ -1,0 +1,92 @@
+/* Roboman (js/game-roboman.js): the piano factory and its rhythm strip, on the felt board. */
+
+/* back wall: chalk drawings of the machines */
+.rb-wall { fill: rgba(0, 0, 0, 0.07); }
+.rb-chalk, .rb-chalk * { fill: rgba(232, 237, 227, 0.035); stroke: rgba(232, 237, 227, 0.16); stroke-width: 1.2; stroke-linejoin: round; stroke-linecap: round; }
+.rb-chalk .rb-chalk-thin { fill: none; stroke: rgba(232, 237, 227, 0.1); stroke-width: 1; }
+.rb-chalk .rb-chalk-dark { fill: rgba(232, 237, 227, 0.12); }
+.rb-chalk .rb-window { fill: rgba(143, 183, 222, 0.045); stroke: rgba(232, 237, 227, 0.12); }
+.rb-chalk .rb-chalk-text { fill: rgba(232, 237, 227, 0.22); stroke: none; font-family: var(--sans); font-weight: 600; letter-spacing: 0.05em; }
+
+/* the factory floor */
+.rb-belt { fill: #13251f; stroke: rgba(232, 237, 227, 0.12); stroke-width: 1; }
+.rb-belt-run { stroke: rgba(232, 237, 227, 0.14); stroke-width: 2; }
+.rb-belt-rollers { stroke: rgba(232, 237, 227, 0.28); stroke-width: 5; stroke-linecap: round; }
+.rb-rail { fill: #2b4a3f; stroke: rgba(232, 237, 227, 0.16); stroke-width: 1; }
+.rb-rivets { stroke: rgba(232, 237, 227, 0.4); stroke-width: 2.6; stroke-linecap: round; }
+.rb-cable { stroke: #7f968b; stroke-width: 1.4; }
+.rb-tag { fill: #2b4a3f; stroke: rgba(232, 237, 227, 0.25); stroke-width: 1; }
+.rb-tag-text { fill: var(--chalk-2); font-family: var(--sans); font-weight: 600; }
+.rb-deck { fill: #7e978b; }
+.rb-web { fill: #2d4a40; }
+.rb-truss { fill: none; stroke: #58756a; stroke-width: 1.3; }
+.rb-flange { fill: #4d685d; }
+.rb-pillar, .rb-post { fill: #24403a; stroke: rgba(232, 237, 227, 0.14); stroke-width: 1; }
+.rb-post-cap { fill: var(--brass); }
+.rb-hazard { opacity: 0.9; }
+.rb-bridge { stroke: #8d6a17; stroke-width: 1; }
+.rb-bridge.short { opacity: 0.6; }
+.rb-weld { fill: #fff6d6; }
+
+/* plugs and the dock */
+.rb-prong { fill: none; stroke: var(--brass); stroke-width: 0.11px; stroke-linecap: round; }
+.rb-led { fill: var(--mint); }
+.rb-led.off { fill: #4a5a53; }
+.rb-dock-pad { fill: var(--brass); }
+.rb-dock-arch { fill: none; stroke: #7e978b; stroke-width: 3; stroke-linecap: round; }
+.rb-dock-bolt { fill: rgba(232, 237, 227, 0.25); transition: fill 0.2s; }
+.rb-dock-bolt.on { fill: var(--mint); }
+
+/* the rhythm strip */
+.rb-strip-edge { stroke: rgba(232, 237, 227, 0.14); stroke-width: 1; }
+.rb-staff { stroke: var(--chalk-2); stroke-width: 1.3; }
+.rb-barline { stroke: var(--chalk-2); stroke-width: 1.3; }
+.rb-final { fill: var(--chalk-2); }
+.rb-tick { stroke: rgba(217, 169, 58, 0.55); stroke-width: 2; stroke-linecap: round; }
+.rb-num { font-family: var(--sans); font-weight: 600; fill: rgba(185, 199, 189, 0.75); font-variant-numeric: tabular-nums; }
+.rb-num-count { fill: rgba(217, 169, 58, 0.6); }
+.rb-and { font-weight: 500; fill: rgba(185, 199, 189, 0.5); }
+.rb-num.now { fill: var(--brass); }
+.rb-tok .ar-glyph { fill: var(--chalk); }
+.rb-stem { stroke: var(--chalk); }
+.rb-tie, .rb-beam rect { fill: var(--chalk); }
+.rb-tok.on .ar-glyph, .rb-tok.on .rb-tie { fill: var(--brass); }
+.rb-tok.on .rb-stem { stroke: var(--brass); }
+.rb-tok.hit .ar-glyph, .rb-tok.hit .rb-tie, .rb-beam.hit rect { fill: var(--mint); }
+.rb-tok.hit .rb-stem { stroke: var(--mint); }
+.rb-tok.miss .ar-glyph, .rb-tok.miss .rb-tie, .rb-beam.miss rect { fill: var(--coral); }
+.rb-tok.miss .rb-stem { stroke: var(--coral); }
+.rb-clef { fill: var(--chalk-2); }
+.rb-ph { stroke: var(--lh); stroke-width: 2.5; stroke-linecap: round; }
+.rb-ph-glow { stroke: rgba(143, 183, 222, 0.22); stroke-width: 9; stroke-linecap: round; }
+.rb-ph-cap { fill: var(--lh); }
+
+/* Roboman */
+.rb-shadow { fill: #000; }
+
+/* HUD: fuel gauge, chances, count-in, feedback */
+.rb-gauge-back { fill: rgba(15, 31, 25, 0.72); stroke: rgba(232, 237, 227, 0.1); stroke-width: 1; }
+.rb-gauge-label { fill: var(--chalk-2); font-family: var(--sans); font-weight: 600; letter-spacing: 0.12em; }
+.rb-fuel-used { fill: var(--coral); }
+.rb-fuel { fill: var(--lh); }
+.rb-fuel-tick { stroke: rgba(26, 29, 27, 0.4); stroke-width: 1.2; }
+.rb-tube { fill: none; stroke: var(--chalk-2); stroke-width: 1.5; }
+.rb-gauge.low .rb-tube { animation: rb-blink 0.5s steps(2, jump-none) infinite; }
+@keyframes rb-blink { from { stroke: var(--coral); } to { stroke: var(--chalk-2); } }
+.rb-life { fill: var(--brass); }
+.rb-life-visor { fill: var(--ink); }
+.rb-life.lost { fill: none; stroke: var(--chalk-3); stroke-width: 1.2; stroke-dasharray: 2 2; }
+.rb-life-visor.lost { fill: none; stroke: none; }
+.rb-count { font-family: var(--sans); font-weight: 600; fill: var(--brass); paint-order: stroke; stroke: var(--felt); stroke-width: 4px; }
+.rb-fb { font-family: var(--sans); font-weight: 600; paint-order: stroke; stroke: var(--felt); stroke-width: 4px; stroke-linejoin: round; }
+.rb-fb-perfect { fill: var(--mint); }
+.rb-fb-good { fill: var(--chalk); }
+.rb-fb-early, .rb-fb-late { fill: var(--brass); }
+.rb-fb-bad { fill: var(--coral); }
+.rb-zap { fill: none; stroke: #e9f3ff; stroke-width: 2; stroke-linejoin: round; }
+.rb-zap-glow { fill: none; stroke: var(--lh); stroke-width: 7; stroke-linejoin: round; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-gauge.low .rb-tube { animation: none; stroke: var(--coral); }
+  .rb-spark { display: none; }
+}

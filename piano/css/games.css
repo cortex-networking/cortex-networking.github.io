@@ -1,14 +1,10 @@
-/* Middle C: extra games (Stepping Stones, Chord Stars, Flashcards) and the quiz runner. */
-
-.gx-scene { position: absolute; inset: 0; }
-.gx-scene svg { width: 100%; height: 100%; display: block; overflow: visible; }
+/* Middle C: Flashcards and the quiz runner (js/games-extra.js). */
 .gx-seg { flex-wrap: wrap; }
 @media (max-width: 600px) {
   .gx-seg { flex-wrap: nowrap; overflow-x: auto; max-width: calc(100vw - 48px); scrollbar-width: none; scroll-behavior: auto; }
   .gx-seg::-webkit-scrollbar { display: none; }
   .gx-seg button { flex: none; white-space: nowrap; }
 }
-
 /* ---------- shared rhythm notation (one-line staff) ---------- */
 .rh-line { stroke: var(--chalk-3); stroke-width: 0.13; }
 .rh-bar { stroke: var(--chalk-3); stroke-width: 0.16; }
@@ -28,64 +24,6 @@
 .rh-count.held, .rh-count.rest { fill: var(--chalk-3); }
 .rh-count.now { fill: var(--brass); }
 .rh-count.miss { fill: var(--coral); }
-
-/* ---------- Stepping Stones ---------- */
-.ss-info { font-family: var(--sans); font-weight: 500; fill: var(--chalk-2); }
-.ss-cin { fill: var(--chalk-3); font-weight: 600; }
-.ss-cin.now { fill: var(--brass); }
-.ss-life { fill: none; stroke: var(--chalk-3); stroke-width: 0.14; }
-.ss-life.on { fill: var(--chalk-2); stroke: var(--chalk-2); }
-.ss-water { fill: color-mix(in srgb, var(--lh) 16%, var(--felt)); }
-.ss-ripple { fill: none; stroke: color-mix(in srgb, var(--lh) 40%, var(--felt)); stroke-width: 0.1; stroke-linecap: round; }
-.ss-bank { fill: var(--felt-3); }
-.ss-rock { fill: var(--felt-3); stroke: var(--chalk-3); stroke-width: 0.1; }
-.ss-onset { stroke: var(--chalk-3); stroke-width: 0.12; stroke-linecap: round; }
-.ss-stone { transform-box: fill-box; transform-origin: center; }
-.ss-stone.next .ss-rock { stroke: var(--brass); stroke-width: 0.16; }
-.ss-stone.hit .ss-rock { fill: var(--mint); stroke: var(--mint); }
-.ss-stone.ok .ss-rock { fill: color-mix(in srgb, var(--mint) 55%, var(--felt-3)); stroke: var(--mint); }
-.ss-stone.hit .ss-onset, .ss-stone.ok .ss-onset { stroke: var(--felt); }
-.ss-stone.miss .ss-rock { fill: color-mix(in srgb, var(--coral) 30%, var(--felt)); stroke: var(--coral); stroke-dasharray: 0.5 0.32; }
-.ss-stone.miss { animation: ss-crumble 0.55s ease-in forwards; }
-.ss-foot { fill: var(--felt); }
-.ss-stone.ok .ss-foot { fill: var(--brass-ink); }
-.ss-fig-body { transform-box: fill-box; transform-origin: 50% 100%; }
-.ss-skin { fill: var(--chalk); }
-.ss-eye { fill: var(--felt); }
-.ss-scarf { fill: var(--brass); }
-.ss-leg { stroke: var(--chalk); stroke-width: 0.26; stroke-linecap: round; }
-.ss-fig.stumble .ss-fig-body { animation: ss-wobble 0.45s ease-out; }
-.ss-splash { fill: none; stroke: var(--coral); stroke-width: 0.14; animation: ss-splash 0.7s ease-out forwards; transform-box: fill-box; transform-origin: center; }
-@keyframes ss-crumble { 0% { transform: none; } 30% { transform: translateY(0.1px) rotate(-2deg); } 100% { transform: translateY(0.9px) scale(0.92, 0.8); opacity: 0.72; } }
-@keyframes ss-wobble { 25% { transform: rotate(-14deg); } 60% { transform: rotate(9deg); } 100% { transform: none; } }
-@keyframes ss-splash { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.6); opacity: 0; } }
-
-/* ---------- Chord Stars ---------- */
-.sf-wrap { position: absolute; inset: 0; pointer-events: none; }
-.sf-scene { left: 50%; right: 22px; top: 2px; bottom: 4px; }
-.sf-mask { fill: var(--felt); }
-.sf-sky { fill: color-mix(in srgb, var(--felt) 72%, #08121a); stroke: var(--felt-3); stroke-width: 1; }
-.sf-dots circle { fill: var(--chalk-3); }
-.sf-hills { fill: var(--felt-3); }
-.sf-hud { font-family: var(--sans); font-weight: 500; fill: var(--chalk-2); }
-.sf-life { fill: none; stroke: var(--chalk-3); stroke-width: 1.2; }
-.sf-life.on { fill: var(--brass); stroke: var(--brass); }
-.sf-link { stroke: var(--chalk-3); stroke-width: 1; stroke-dasharray: 2 3; }
-.sf-cstar { fill: var(--mint); }
-.sf-cstar.fast { fill: var(--brass); }
-.sf-burst { fill: none; stroke: var(--mint); stroke-width: 1.4; animation: sf-burst 0.6s ease-out forwards; transform-box: fill-box; transform-origin: center; }
-.sf-head { fill: var(--brass); stroke: var(--brass-ink); stroke-width: 0.8; stroke-linejoin: round; }
-.sf-trail { stroke: var(--brass); stroke-width: 2; stroke-linecap: round; opacity: 0.45; }
-.sf-sym { font-family: var(--serif); font-weight: 500; fill: var(--chalk); }
-.sf-star.landed .sf-head { fill: var(--coral); stroke: var(--coral); }
-.sf-star.landed .sf-trail { display: none; }
-.sf-thud { fill: none; stroke: var(--coral); stroke-width: 1.4; animation: sf-thud 0.9s ease-out forwards; transform-box: fill-box; transform-origin: center; }
-.sf-caption { position: absolute; top: 4px; left: 0; width: 40%; color: var(--chalk); }
-.sf-cap-main { font: 500 clamp(24px, 3.4vw, 40px)/1.05 var(--serif); color: var(--brass); letter-spacing: -0.01em; }
-.sf-cap-sub { margin-top: 3px; font-size: 14px; line-height: 1.3; color: var(--chalk-2); text-wrap: balance; }
-@keyframes sf-burst { from { transform: scale(0.3); opacity: 1; } to { transform: scale(2.2); opacity: 0; } }
-@keyframes sf-thud { from { transform: scale(0.4); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
-
 /* ---------- quiz ---------- */
 .qz-host { position: absolute; inset: 0; container-type: size; }
 .qz {
@@ -152,7 +90,6 @@
 .qz-review-item { margin: 0; padding: 6px 10px; border-left: 3px solid var(--coral); background: var(--felt-2); border-radius: 0 6px 6px 0; font-size: 14.5px; }
 .qz.qz-done .qz-main { align-self: start; }
 .qz-preview .qz-choice { opacity: 0.8; }
-
 @container (min-width: 640px) {
   .qz { grid-template-columns: minmax(0, 1fr) minmax(320px, 1.05fr); grid-template-rows: 1fr; gap: 20px; align-items: center; }
   .qz.qz-novis { grid-template-columns: minmax(0, 720px); justify-content: center; }
@@ -160,7 +97,6 @@
   .qz-main { align-self: center; }
   .qz-q { font-size: 17px; }
 }
-
 @container (max-height: 300px) {
   .qz { grid-template-rows: minmax(64px, 1fr) auto; }
   .qz-vis { min-height: 64px; }
@@ -171,21 +107,15 @@
 @container (max-height: 300px) and (min-width: 640px) {
   .qz { grid-template-rows: 1fr; }
 }
-
 @media (max-width: 860px) {
   .qz { padding: 2px 14px 4px; }
-  .sf-scene { right: 14px; }
   .qz-choice { min-height: 42px; }
 }
 @media (max-width: 420px) {
   .qz-q { font-size: 15px; margin-bottom: 8px; }
   .qz-choices { gap: 6px; }
   .qz-choice { padding: 6px 8px 6px 6px; gap: 8px; font-size: 14.5px; }
-  .sf-cap-sub { font-size: 13px; }
 }
-
 @media (prefers-reduced-motion: reduce) {
-  .ss-stone.miss, .ss-fig.stumble .ss-fig-body, .ss-splash, .sf-burst, .sf-thud { animation: none; }
-  .ss-splash, .sf-burst, .sf-thud { display: none; }
   .rh-ev, .qz-choice { transition: none; }
 }
