@@ -90,3 +90,11 @@
 /* Ducks song mode: bar posts */
 .duck-post-line { stroke: var(--chalk-3); stroke-width: 1.5; }
 .duck-post-num { font-family: var(--sans); font-weight: 600; fill: var(--chalk-2); font-variant-numeric: tabular-nums; }
+
+/* phones: the Level, Song and Hand pickers share two compact rows */
+@media (max-width: 520px) {
+  .ar-level { gap: 0; }
+  .ar-level > span:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .ar-level select { max-width: 36vw; padding: 7px 22px 7px 8px; font-size: 14px; background-position: right 7px center; }
+  .ar-song select { max-width: 45vw; }
+}
