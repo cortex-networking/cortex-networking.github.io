@@ -15,7 +15,53 @@
   <link rel="stylesheet" href="css/game-ripchord.css">
   <link rel="stylesheet" href="css/game-aliens.css">
   <link rel="stylesheet" href="css/game-roboman.css">
-  <script type="module" src="js/app.js"></script>
+  <script>
+    // Deploy guard. The site serves plain ES modules with a 10-minute cache and no build step, so
+    // during a deploy a browser can get a mix of old and new modules (a missing export stops the
+    // whole app) or a transient 503 for one of them. If the app hasn't started once the page has
+    // loaded, re-fetch every module past the cache and reload once; if it fails again, say so.
+    (function () {
+      var KEY = 'middle-c/boot-retry';
+      var get = function () { try { return sessionStorage.getItem(KEY); } catch (e) { return '1'; } };
+      var set = function (v) { try { if (v) sessionStorage.setItem(KEY, v); else sessionStorage.removeItem(KEY); } catch (e) {} };
+      function refresh() {
+        var seen = {};
+        function walk(url) {
+          if (seen[url]) return Promise.resolve();
+          seen[url] = 1;
+          return fetch(url, { cache: 'reload' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (src) {
+            var re = /['"`](\.\.?\/[\w.\/-]+\.js)['"`]/g, m, next = [];
+            while ((m = re.exec(src))) next.push(walk(new URL(m[1], url).href));
+            return Promise.all(next);
+          }, function () {});
+        }
+        var entry = document.querySelector('script[type=module][src]');
+        return walk(entry ? entry.src : new URL('js/app.js', location.href).href);
+      }
+      function check() {
+        if (window.app) { set(null); return; }
+        if (!get()) {
+          set('1');
+          var go = function () { location.reload(); };
+          setTimeout(go, 4000);
+          refresh().then(go, go);
+          return;
+        }
+        var p = document.createElement('div');
+        p.className = 'noscript boot-fail';
+        p.setAttribute('role', 'alert');
+        p.textContent = 'Middle C couldn’t load. The site may be updating: wait a minute, then ';
+        var b = document.createElement('button');
+        b.type = 'button'; b.className = 'btn primary'; b.textContent = 'Reload';
+        b.onclick = function () { set(null); location.reload(); };
+        p.appendChild(b);
+        document.body.appendChild(p);
+      }
+      window.addEventListener('load', function () { setTimeout(check, 0); });
+    })();
+  </script>
+  <!-- bump v= on each release so a fresh index.html never pairs with a cached app.js -->
+  <script type="module" src="js/app.js?v=2026-10-30"></script>
 </head>
 <body data-tab="learn">
   <header class="bar">
@@ -58,7 +104,7 @@
           <p class="kicker" id="kicker"></p>
           <h1 id="title"></h1>
         </div>
-        <div class="pips" id="pips" role="img"></div>
+        <div class="pips" id="pips" role="img" aria-hidden="true"></div>
       </div>
       <p class="prompt" id="prompt"></p>
       <div class="score">

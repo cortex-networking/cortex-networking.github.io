@@ -4,7 +4,8 @@ import { h, segmented } from './ui.js';
 export class GameBase {
   constructor(app, game) {
     this.app = app; this.game = game;
-    this.level = app.store.data.gameLevel?.[game.id] ?? 0;
+    const lv = app.store.data.gameLevel?.[game.id];
+    this.level = Number.isInteger(lv) ? Math.max(0, Math.min(lv, game.levels.length - 1)) : 0;
   }
 
   enter() {

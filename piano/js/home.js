@@ -226,7 +226,8 @@ export class ProgressMode {
         ? h('ul', { class: 'song-list' }, ...songs.slice(0, 8).map((s) => h('li', { class: 'row' }, h('span', {}, s.title), stars(store.song(s.id).stars || 0))))
         : h('p', {}, 'No songs played yet.'));
 
-    this.app.ui.layer(h('div', { class: 'home progress' }, h('div', { class: 'home-grid' }, chapters, skillCard, spotCard, timeCard, songCard)));
+    // a scrolling region with no buttons in it: focusable, so keyboard users can scroll it
+    this.app.ui.layer(h('div', { class: 'home progress', tabindex: '0', role: 'region', 'aria-label': 'Progress' }, h('div', { class: 'home-grid' }, chapters, skillCard, spotCard, timeCard, songCard)));
   }
 
   practice(cat) {

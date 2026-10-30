@@ -33,7 +33,8 @@ export class Session {
 
   _resetStats() {
     const total = this.o.mode === 'tap' ? this.steps.length : this.practice.length;
-    this.stats = { correct: 0, wrong: 0, perfect: 0, good: 0, ok: 0, missed: 0, short: 0, rest: 0, sync: 0, loud: 0, total };
+    // missed counts every note not played in time; slip, the ones of those where a wrong key was pressed instead
+    this.stats = { correct: 0, wrong: 0, perfect: 0, good: 0, ok: 0, missed: 0, slip: 0, short: 0, rest: 0, sync: 0, loud: 0, total };
   }
 
   get spb() { return 60 / (this.score.tempo * this.o.tempoScale); }
@@ -80,6 +81,7 @@ export class Session {
     this.down = new Map();       // midi -> { note, at } for hold checks
     this.handHits = new Map();   // step t -> { R: time, L: time }
     this.dynFlag = new Set();
+    this.slipped = new Set();    // notes a wrong key was played for (they are wrong notes, not left out)
     this.tracker = this.o.mode !== 'listen' && coach ? coach.begin({ ...(this.o.context || {}), score: this.score, hands: this.o.hands, tempo: this.o.tempoScale, staves: this.o.staves }) : null;
     if (this.o.mode === 'wait') {
       this.idx = 0;
@@ -230,7 +232,7 @@ export class Session {
       this.stats.wrong++;
       kb.flash(midi, 'miss', 450);
       if (resting && !due) { this.stats.rest++; this._coach('rest', { t: beat }); }
-      else if (due && !tap) this._coach('wrong-pitch', { expected: due.midi, played: midi, t: due.t });
+      else if (due && !tap) { this.slipped.add(due.i); this._coach('wrong-pitch', { expected: due.midi, played: midi, t: due.t }); }
       else if (tap) {
         // early or late by the nearest beat still to be tapped (all beats when none are left)
         const open = this.steps.filter((st) => !this.judged.has(`s${st.t}`));
@@ -263,7 +265,8 @@ export class Session {
       if (best.dyn && source === 'midi' && !this.dynFlag.has(best.dyn + best.t)) {
         const want = DYNAMICS[best.dyn];
         // thresholds follow the player's own touch when they've done the touch check in Settings
-        const t = this.app.settings.touch;
+        let t = this.app.settings.touch;
+        if (!(t && Number.isFinite(t.soft) && Number.isFinite(t.loud) && t.loud > t.soft)) t = null;
         const softMax = t ? t.soft + 0.65 * (t.loud - t.soft) : 0.72;
         const loudMin = t ? t.soft + 0.35 * (t.loud - t.soft) : 0.5;
         if ((want <= 0.45 && vel > softMax) || (want >= 0.8 && vel < loudMin)) {
@@ -309,14 +312,17 @@ export class Session {
     while (this.t0 + this.clickBeat * spb < horizon) {
       const b = this.clickBeat;
       if (b < 0 || (this.o.metronome && this.o.mode !== 'listen')) {
-        if (b < this.score.length - 1e-6) sound.click(this.t0 + b * spb, this._downbeat(b));
+        // clicks already in the past (the tab was in the background) are skipped, not piled up at once
+        if (b < this.score.length - 1e-6 && this.t0 + b * spb >= now - 0.05) sound.click(this.t0 + b * spb, this._downbeat(b));
       }
       this.clickBeat += this.clickUnit;
       if (this.clickBeat > this.score.length + 4) break;
     }
+    // anything already past (the tab was in the background, or a long stall) is dropped, not piled up at once
     while (this.otherPtr < this.other.length && this.t0 + this.other[this.otherPtr].t * spb < horizon) {
       const e = this.other[this.otherPtr++];
-      this._playOther(e, this.t0 + e.t * spb);
+      const when = this.t0 + e.t * spb;
+      if (when >= now - 0.05) this._playOther(e, when);
     }
     while (this.bandPtr < this.band.length && this.t0 + this.band[this.bandPtr].t * spb < horizon) {
       const e = this.band[this.bandPtr++];
@@ -338,7 +344,8 @@ export class Session {
         this.judged.add(n.i);
         this.stats.missed++;
         (tap ? n.notes : [n]).forEach((x) => staff.noteClass(x.i, 'miss'));
-        this._coach('missed', { expected: n.midi, t: n.t });
+        if (this.slipped?.has(n.i)) this.stats.slip++;
+        else this._coach('missed', { expected: n.midi, t: n.t });
         this._update({ grade: 'missed' });
       }
       this.missPtr++;

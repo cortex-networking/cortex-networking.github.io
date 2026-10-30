@@ -514,7 +514,7 @@ export class ArcadeBase extends GameBase {
     super(app, game);
     this.embedded = opts.embedded || null;
     if (this.embedded && this.embedded.level !== undefined) this.level = this.embedded.level;
-    this.level = Math.min(this.level, this.game.levels.length - 1);
+    this.level = Math.max(0, Math.min(this.level, this.game.levels.length - 1));
     this.sfx = new Sfx(app.sound);
   }
 
