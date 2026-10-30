@@ -13,6 +13,8 @@ export class Input extends EventTarget {
     this.outputs = [];
     this.selected = 'all';
     this.held = new Map();      // midi -> source
+    this.notePort = new Map();  // midi -> id of the MIDI port holding it
+    this.pedalPort = null;      // id of the MIDI port whose pedal is down
     this.pedal = false;
     this.pcOctave = 4;
     this.pcDown = new Map();    // code -> midi
@@ -55,6 +57,10 @@ export class Input extends EventTarget {
       port.onmidimessage = (e) => this._message(e, port);
     }
     if (this.selected !== 'all' && !this.devices.some((d) => d.id === this.selected)) this.selected = 'all';
+    // a keyboard unplugged mid-note (or mid-pedal) never sends its note-offs: release them here
+    const live = new Set(this.devices.map((d) => d.id));
+    for (const [m, id] of [...this.notePort]) if (!live.has(id)) this.release(m, 'midi');
+    if (this.pedalPort && !live.has(this.pedalPort)) { this.pedalPort = null; this.setPedal(false); }
     this.status = this.devices.length ? 'connected' : 'waiting';
     this._emit('status');
     if (this.devices.length > before) this._emit('plugged');
@@ -71,9 +77,13 @@ export class Input extends EventTarget {
       this._control({ kind: 'note', ch, num: d1, value: on ? d2 / 127 : 0, port: port.id, name: port.name });
       return;
     }
-    if (cmd === 0x90 && d2 > 0) this.press(d1, d2 / 127, 'midi', e.timeStamp);
-    else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) this.release(d1, 'midi', e.timeStamp);
-    else if (cmd === 0xb0 && d1 === 64) this.setPedal(d2 >= 64);
+    if (cmd === 0x90 && d2 > 0) { this.press(d1, d2 / 127, 'midi', e.timeStamp); this.notePort.set(d1, port.id); }
+    else if (cmd === 0x80 || (cmd === 0x90 && d2 === 0)) {
+      // a second keyboard holding the same key keeps it down
+      if (this.notePort.has(d1) && this.notePort.get(d1) !== port.id) return;
+      this.release(d1, 'midi', e.timeStamp);
+    }
+    else if (cmd === 0xb0 && d1 === 64) { this.pedalPort = d2 >= 64 ? port.id : null; this.setPedal(d2 >= 64); }
     else if (cmd === 0xb0 && (d1 === 120 || d1 === 123)) this.releaseAll();
     else if (cmd === 0xb0) this._control({ kind: 'cc', ch, num: d1, value: d2 / 127, port: port.id, name: port.name });
     else if (cmd === 0xe0) this._control({ kind: 'pb', ch, num: 0, value: ((d2 << 7) | d1) / 16383, port: port.id, name: port.name });
@@ -97,6 +107,7 @@ export class Input extends EventTarget {
   release(midi, source, time = performance.now()) {
     if (!this.held.has(midi)) return;
     this.held.delete(midi);
+    this.notePort.delete(midi);
     this.dispatchEvent(new CustomEvent('noteoff', { detail: { midi, source, time } }));
   }
 
@@ -116,6 +127,8 @@ export class Input extends EventTarget {
     };
     target.addEventListener('keydown', (e) => {
       if (e.metaKey || e.ctrlKey || e.altKey || typing(e)) return;
+      // Settings and other dialogs: the letter keys don't play the page behind them
+      if (document.querySelector('dialog[open]')) return;
       if (e.code === 'KeyZ' || e.code === 'KeyX') {
         if (e.repeat) return;
         this.pcOctave = Math.max(1, Math.min(7, this.pcOctave + (e.code === 'KeyZ' ? -1 : 1)));
@@ -137,7 +150,7 @@ export class Input extends EventTarget {
       this.release(midi, 'pc');
     });
     window.addEventListener('blur', () => {
-      for (const [code, midi] of this.pcDown) this.release(midi, 'pc');
+      for (const midi of this.pcDown.values()) this.release(midi, 'pc');
       this.pcDown.clear();
     });
   }
