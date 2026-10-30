@@ -43,13 +43,13 @@ export const SONGS_CLASSICAL = [
     tags: ['classical'], style: 'classical',
     chords: 'N.C. | Am | E | Am | N.C. | Am | E | Am | C | G | Am | E | E | E | N.C. | Am | E | Am | N.C. | Am | E | Am',
     blurb: 'The famous rocking E–D♯ theme, the sunnier middle phrase, and the way back home.',
-    rh: '!pp E5s:5 D#5:4 | E5:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 G#4:3 B4:4 | C5e:5 rs E4s:1 E5:5 D#5:4 | E5:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 C5:4 B4:3 | A4e:2 rs B4s:2 C5:3 D5:4 | E5e.:5 G4s:1 F5:5 E5:4 | D5e.:4 F4s:1 E5:5 D5:4 | C5e.:3 E4s:1 D5:4 C5:3 | B4e:2 rs E4s:1 E5:5 rs | rs E5s:1 E6:5 rs rs D#5:4 | E5e:5 rs D#5s:4 E5:5 D#5:4 | E5s:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 G#4:3 B4:4 | C5e:5 rs E4s:1 E5:5 D#5:4 | E5s:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 C5:4 B4:3 | A4q.:2',
+    rh: '!pp E5s:5 D#5:4 | E5:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 G#4:3 B4:4 | C5e:5 rs E4s:1 E5:5 D#5:4 | E5:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 C5:4 B4:3 | A4e:2 rs B4s:2 C5:3 D5:4 | E5e.:5 G4s:1 F5:5 E5:4 | D5e.:3 F4s:1 E5:5 D5:4 | C5e.:3 E4s:1 D5:4 C5:3 | B4e:2 rs E4s:1 E5:5 rs | rs E5s:1 E6:5 rs rs D#5:4 | E5e:5 rs D#5s:4 E5:5 D#5:4 | E5s:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 G#4:3 B4:4 | C5e:5 rs E4s:1 E5:5 D#5:4 | E5s:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 C5:4 B4:3 | A4q.:2',
     lh: 're | rq. | A2s:5 E3:2 A3:1 re. | E2s:5 E3:1 G#3:2 re. | A2s:5 E3:2 A3:1 re. | rq. | A2s:5 E3:2 A3:1 re. | E2s:5 E3:1 G#3:2 re. | A2s:5 E3:2 A3:1 rs re | C3s:5 G3:2 C4:1 re. | G2s:5 G3:2 B3:1 re. | A2s:5 E3:2 A3:1 re. | E2s:5 E3:1 E4 re. | rq. | rq. | rq. | A2s:5 E3:2 A3:1 re. | E2s:5 E3:1 G#3:2 re. | A2s E3 A3 re. | rq. | A2s E3 A3 re. | E2s E3 G#3 re. | A2s E3 A3 re.',
   },
   // ---------- epic and dark ----------
   {
     id: 'hall-of-the-mountain-king', title: 'In the Hall of the Mountain King', composer: 'Edvard Grieg', year: 1875,
-    level: 2, key: 'Am', time: [4, 4], tempo: 112,
+    level: 3, key: 'Am', time: [4, 4], tempo: 112,
     tags: ['epic', 'classical', 'games'], style: 'epic',
     chords: 'Am | Am | Am | C | Am | Am | Am | C | E | Caug E | E | Caug E | Am | Am | Am | Am',
     blurb: 'Trolls creeping through a mountain hall, quiet at first and getting louder every time round (moved to A minor to keep the sharps down).',
@@ -72,7 +72,7 @@ export const SONGS_CLASSICAL = [
     chords: 'N.C. | N.C. | N.C. | N.C.:1 C#dim7/D:3 | C#dim7/D:1 D:3 | Dm/A | A7 Dm/A | A7 Dm | A7 Dm',
     blurb: 'The most famous organ opening ever written: three falling flourishes, a growling chord over a low D, then a spiralling run passed from hand to hand.',
     rh: '!f A5s:5 G5:4 A5q.:5 G5s:4 F5:3 E5:2 D5:1 C#5:2 D5:1 re | A4s:5 G4:4 A4q.:5 E4s:2 F4:3 C#4:1 D4:2 rq | rw | !ff rq C#4+E4+G4+Bb4h.:1235~ | C#4+E4+G4+Bb4q D4+F#4+A4h:135 re rs A4s:1 | !f D5s:1 E5:2 F5:3 D5:1 E5:2 F5:3 G5:4 E5:2 F5:1 G5:2 A5:3 F5:1 G5:2 A5:3 Bb5:4 G5:2 | A5s:4 F5:2 G5:3 E5:1 F5:3 D5:1 E5:2 C#5:1 D5:3 A4:1 Bb4:2 G4:1 A4:3 F4:1 G4:2 E4:1 | F4s:4 D4:2 G4:5 E4:3 F4:4 D4:2 E4:3 C#4:1 rh | rh D4+F4+A4h:135',
-    lh: 'rw | rw | A3s:1 G3:2 A3q.:1 G3s:2 F3:3 E3:4 D3:5 C#3:4 D3:3 re | D2+D3w:51 | D2+D3w | A2+A3w:51~ | A2+A3w | rh D4s:1 A3:4 Bb3:3 G3:5 A3:4 F3 G3 E3 | F3s:1 D3:3 G3:1 E3:2 F3:1 D3:3 E3:2 C#3:4 D2+D3h:51',
+    lh: 'rw | rw | A3s:1 G3:2 A3q.:1 G3s:2 F3:3 E3:1 D3:2 C#3:3 D3:2 re | D2+D3w:51 | D2+D3w | A2+A3w:51~ | A2+A3w | rh D4s:1 A3:4 Bb3:3 G3:5 A3:4 F3 G3 E3 | F3s:1 D3:3 G3:1 E3:2 F3:1 D3:3 E3:2 C#3:4 D2+D3h:51',
   },
   {
     id: 'danse-macabre', title: 'Danse Macabre (theme)', composer: 'Camille Saint-Saëns', year: 1874,
@@ -114,7 +114,7 @@ export const SONGS_CLASSICAL = [
     id: 'ride-of-the-valkyries', title: 'Ride of the Valkyries (theme)', composer: 'Richard Wagner', year: 1856,
     level: 3, key: 'Bm', time: [9, 8], tempo: 100,
     tags: ['epic', 'classical', 'games'], style: 'epic',
-    chords: 'Bm | Bm | D/A | D | D | D | F#/C# | F# | Bm | Bm | D/A | D',
+    chords: 'Bm | Bm | D/A | D | D | D | F#m/C# | F# | Bm | Bm | D/A | D',
     blurb: 'Battle-maidens galloping through the storm: Wagner’s galloping horn call in B minor, three times, louder each time.',
     rh: '!mf B3e.:2 F#3s:1 B3e:2 D4q.:3 B3q.:2 | D4e.:3 B3s:1 D4e:3 F#4q.:5 D4q.:3 | F#4e.:3 D4s:1 F#4e:3 A4q.:5 A3q.:1 | D4e.:3 A3s:1 D4e:3 F#4h.:5 | !f D4e.:2 A3s:1 D4e:2 F#4q.:4 D4q.:2 | F#4e.:4 D4s:2 F#4e:4 A4q.:5 F#4q.:4 | A4e.:3 F#4s:1 A4e:3 C#5q.:5 C#4q.:1 | F#4e.:3 C#4s:1 F#4e:3 A#4h.:5 | !ff B3e.:2 F#3s:1 B3e:2 D4q.:3 B3q.:2 | D4e.:3 B3s:1 D4e:3 F#4q.:5 D4q.:3 | F#4e.:3 D4s:1 F#4e:3 A4q.:5 A3q.:1 | D4e.:3 A3s:1 D4e:3 F#4h.:5',
     lh: '!mf B2+D3q.:53 B2+D3q. B2+D3q. | B2+D3q. B2+D3q. B2+D3q. | A2+D3q.:52 A2+D3q. A2+D3q. | D2+A2q.:51 D2+A2q. D2+A2q. | !f D2+A2q. D2+A2q. D2+A2q. | D2+A2q. D2+A2q. D2+A2q. | C#3+F#3q.:52 C#3+F#3q. C#3+F#3q. | F#2+C#3q.:51 F#2+C#3q. F#2+C#3q. | !ff B2+D3q.:53 B2+D3q. B2+D3q. | B2+D3q. B2+D3q. B2+D3q. | A2+D3q.:52 A2+D3q. A2+D3q. | D2+A2q.:51 D2+A2q. D2+A2q.',
@@ -134,7 +134,7 @@ export const SONGS_CLASSICAL = [
     tags: ['epic', 'classical', 'march', 'games'], style: 'march',
     chords: 'Dm | A7 | Dm | A7 | Dm A | Dm C7 | F E | A7 | Dm | A7 | Dm | A7 | Dm C7 | F Eb/G | Dm/A A7 | A7 Dm',
     blurb: 'A tiptoeing, slightly comic procession for a broken puppet, later famous as a spooky TV theme.',
-    rh: '!p rq D4e:3 E4:4 C#4:2 B3:1 | C#4q:2 D4e:3 E4q:4 re | rq D4e:3 E4:4 C#4:2 B3:1 | C#4q:2 D4e:3 E4q:4 re | !mf rq F4e:1 A4q:3 G4e:2 | F4q:1 A4e:2 C5q:4 Bb4e:3 | A4q:1 C5e:2 E5q:4 D5e:3 | C#5e:3 Bb4:2 A4:1 G4:3 F4:2 E4:1 | !p rq D4e:3 E4:4 C#4:2 B3:1 | C#4q:2 D4e:3 E4q:4 re | rq D4e:1 A4q.:5~ | A4q. G4q.:4 | !mf F4q:1 A4e:2 C5q:4 Bb4e:3 | A4e:4 G4:3 F4:2 Eb4:1 G4:2 Bb4:4 | D4e:2 C#4:1 D4:2 E4q:3 F4e:4 | !p E4q.:3 D4q.:2',
+    rh: '!p rq D4e:3 E4:4 C#4:2 B3:1 | C#4q:2 D4e:3 E4q:4 re | rq D4e:3 E4:4 C#4:2 B3:1 | C#4q:2 D4e:3 E4q:4 re | !mf rq F4e:1 A4q:3 G4e:2 | F4q:1 A4e:2 C5q:4 Bb4e:3 | A4q:1 C5e:2 E5q:4 D5e:3 | C#5e:3 Bb4:2 A4:1 G4:3 F4:2 E4:1 | !p rq D4e:3 E4:4 C#4:2 B3:1 | C#4q:2 D4e:3 E4q:4 re | rq D4e:1 A4q.:5~ | A4q. G4q.:4 | !mf F4q:1 A4e:3 C5q:5 Bb4e:4 | A4e:4 G4:3 F4:2 Eb4:1 G4:2 Bb4:4 | D4e:2 C#4:1 D4:2 E4q:3 F4e:4 | !p E4q.:3 D4q.:2',
     lh: '!p D2+D3q.:51 F3+A3q.:31 | E3+G3+A3q.:321 A2+G3+A3q.:521 | D2q.:5 F3+A3q.:31 | E3+G3+A3q. A2+G3+A3q. | !mf D2q.:5 A2+C#3+E3q.:531 | D3+F3q.:31 C3+G3q.:51 | F3+A3q.:31 E3+B3q.:41 | A2+C#3+E3q.:531 rq. | !p D2+D3q.:51 F3+A3q.:31 | E3+G3+A3q.:321 A2+G3+A3q.:521 | D2q.:5 F3+A3q.:31 | E3+G3+A3q. A2+E3+A3q.:521 | !mf D3+F3+A3q.:531 C3+G3q.:51 | F3+A3q.:31 G3+Bb3q.:21 | A2+F3q.:51 A2+G3q.:51 | !p A2+G3q.:51 D3+F3q.:31',
   },
   {
@@ -161,8 +161,8 @@ export const SONGS_CLASSICAL = [
     tags: ['classical', 'epic'], style: 'classical',
     chords: 'F:2 Dm:1 | C | F:2 G:1 | Am:2 G:1 | F:2 Dm:1 | C | F | C:2 C/E:1 | G:2 Am:1 | G/B:2 C/E:1 | G:2 C:1 | F:1 F/E:1 Dm:1 | Am:1 C/G:1 F:1 | C/E:1 Dm7:1 C:1 | F:1 Dm:1 Am/C:1 | G/B:1 Am7:1 G:1 | F:2 G7/B:1 | C/E:1 C:1 Em:1 | F:2 G:1 | Am:2 G:1 | F:2 G7/D:1 | C/E:1 C:2 | F:2 Dm/F:1 | C',
     blurb: 'The great noble tune from the middle of “Jupiter” in Holst’s The Planets, as he set it in 1921 as the hymn tune Thaxted.',
-    rh: '!mf E4e:1 G4:2 | A4q.:3 C5e:5 B4e.:4 G4s:2 | C5e:4 D5:5 C5q:4 B4:3 | A4e:2 B4:3 A4q:2 G4:1 | E4h:1 E4e:1 G4:2 | A4q.:3 C5e:5 B4e.:4 G4s:2 | C5e:1 D5:2 E5q:3 E5:3 | E5e:3 D5:2 C5q:1 D5:2 | C5h:1 G4e:5 E4:3 | D4q.:2 D4e:2 C4:1 E4:3 | D4q:2 G4:5 G4e:5 E4:3 | D4q.:2 D4e:2 E4:3 G4:5 | A4h:2 A4e:2 B4:3 | C5e.:4 C5s:4 B4q:3 A4:2 | G4q:1 C5:4 E4:3 | D4e:2 C4:1 D4q:2 E4:3 | G4h:5 E4e:1 G4:2 | !f A4q.:3 C5e:5 B4e.:4 G4s:2 | C5e:4 D5:5 C5q:4 B4:3 | A4e:2 B4:3 A4q:2 G4:1 | E4h:1 E4e:1 G4:2 | A4q.:3 C5e:5 B4e.:4 G4s:2 | C5e:1 D5:2 E5q:3 E5:3 | E5e:3 D5:2 C5q:1 D5:2 | C5h.:1',
-    lh: '!mf C3q:4 | F3h:1 D3q:3 | C3h.:4 | F3h:2 G3q:1 | A3h:1 G3q:2 | F3h:2 D3q:4 | C3h.:5 | F3h.:2 | C3h:5 E3q:3 | G3h:2 A3q:1 | B2h:3 E3q:1 | G2h:5 C3q:4 | F3q:1 E3:2 D3:3 | A3q:1 G3:2 F3:3 | E3q:1 D3:2 C3:3 | F3q:1 D3:3 C3:4 | B2q:3 A2:4 G2:5 | !f F3h:1 B2q:4 | E3q:2 C3:4 E3:2 | F3h:2 G3q:1 | A3h:1 G3q:2 | F3h:2 D3q:4 | E3q:2 C3h:4 | F3h.:2 | C3h.:5',
+    rh: '!mf E4e:1 G4:2 | A4q.:3 C5e:5 B4e.:4 G4s:2 | C5e:4 D5:5 C5q:4 B4:3 | A4e:2 B4:3 A4q:2 G4:1 | E4h:1 E4e:1 G4:2 | A4q.:3 C5e:5 B4e.:4 G4s:2 | C5e:1 D5:2 E5q:3 E5:3 | E5e:3 D5:2 C5q:1 D5:2 | C5h:1 G4e:5 E4:3 | D4q.:2 D4e:2 C4:1 E4:3 | D4q:2 G4:5 G4e:5 E4:3 | D4q.:2 D4e:2 E4:3 G4:1 | A4h:2 A4e:2 B4:3 | C5e.:4 C5s:4 B4q:3 A4:2 | G4q:1 C5:4 E4:3 | D4e:2 C4:1 D4q:2 E4:3 | G4h:5 E4e:1 G4:2 | !f A4q.:3 C5e:5 B4e.:4 G4s:2 | C5e:4 D5:5 C5q:4 B4:3 | A4e:2 B4:3 A4q:2 G4:1 | E4h:1 E4e:1 G4:2 | A4q.:3 C5e:5 B4e.:4 G4s:2 | C5e:1 D5:2 E5q:3 E5:3 | E5e:3 D5:2 C5q:1 D5:2 | C5h.:1',
+    lh: '!mf C3q:4 | F3h:1 D3q:3 | C3h.:4 | F3h:2 G3q:1 | A3h:1 G3q:2 | F3h:2 D3q:4 | C3h.:5 | F3h.:2 | C3h:5 E3q:3 | G3h:2 A3q:1 | B2h:3 E3q:1 | G2h:5 C3q:4 | F3q:1 E3:2 D3:3 | A3q:1 G3:2 F3:3 | E3q:1 D3:2 C3:3 | F3q:1 D3:2 C3:1 | B2q:3 A2:4 G2:5 | !f F3h:1 B2q:4 | E3q:2 C3:4 E3:2 | F3h:2 G3q:1 | A3h:1 G3q:2 | F3h:2 D3q:4 | E3q:2 C3h:4 | F3h.:2 | C3h.:5',
   },
   {
     id: 'prelude-e-minor', title: 'Prelude in E Minor', composer: 'Frédéric Chopin', year: 1839,
@@ -206,7 +206,7 @@ export const SONGS_CLASSICAL = [
     tags: ['classical'], style: 'classical',
     chords: 'D A Bm F#m | G D G A | D A Bm F#m | G D G A | D A Bm F#m | G D G A | D A Bm F#m | G D G A | D',
     blurb: 'Eight bass notes repeating forever while the melody above gets busier each time round, the wedding favourite in its simplest form.',
-    rh: '!p F#5q:4 E5:3 D5:2 C#5:1 | B4q:2 A4:1 B4:2 C#5:3 | D5q:4 C#5:3 B4:2 A4:1 | G4q:3 F#4:2 G4:3 E4:1 | !mp D4e:1 F#4:2 A4:4 G4:3 F#4:2 D4:1 F#4:3 E4:2 | D4e:2 B3:1 D4:2 A4:4 G4:3 B4:5 A4:4 G4:3 | !mf F#4e:3 D4:1 E4:2 C#5:1 D5:2 F#5:4 A5:5 A4:1 | B4e:3 G4:1 A4:2 F#4:1 D4:1 D5:5 D5e.:5 C#5s:4 | D5w:5',
+    rh: '!p F#5q:4 E5:3 D5:2 C#5:1 | B4q:2 A4:1 B4:2 C#5:3 | D5q:4 C#5:3 B4:2 A4:1 | G4q:3 F#4:2 G4:3 E4:1 | !mp D4e:1 F#4:2 A4:4 G4:3 F#4:2 D4:1 F#4:4 E4:3 | D4e:2 B3:1 D4:2 A4:4 G4:3 B4:5 A4:4 G4:3 | !mf F#4e:3 D4:1 E4:2 C#5:1 D5:2 F#5:4 A5:5 A4:1 | B4e:4 G4:2 A4:3 F#4:2 D4:1 D5:5 D5e.:5 C#5s:4 | D5w:5',
     lh: `!p D3q:1 A2:4 B2:3 F#2:5 | G2q:3 D2:5 G2:2 A2:1 | ${repBars('D3q A2 B2 F#2 | G2q D2 G2 A2', 3)} | D2+D3w:51`,
   },
   {
@@ -233,7 +233,7 @@ export const SONGS_CLASSICAL = [
     tags: ['classical', 'march'], style: 'march',
     chords: 'Am | Am | Am | Am | Em | Em | Em:1 B7:1 | Em | Am | Am | Am | F7 | Am/E Bdim/D | Am/C Bdim/D | Am/E E | Am',
     blurb: 'Mozart imitating a Turkish military band: twirling sixteenths, then crunchy marching chords.',
-    rh: '!p B4s:4 A4:3 G#4:2 A4:1 | C5e:3 re D5s:3 C5:2 B4:1 C5:2 | E5e:4 re F5s:4 E5:3 D#5:2 E5:1 | B5s:4 A5:3 G#5:2 A5:1 B5:4 A5:3 G#5:2 A5:1 | C6q:5 A5e:2 C6:4 | B5e:5 F#5+A5e:24 E5+G5e:13 F#5+A5e:24 | B5e:5 F#5+A5e:24 E5+G5e:13 F#5+A5e:24 | B5e:5 F#5+A5e:24 E5+G5e:13 D#5+F#5e:24 | E5q:3 !mp B4s:4 A4:3 G#4:2 A4:1 | C5e:3 re D5s:3 C5:2 B4:1 C5:2 | E5e:4 re F5s:4 E5:3 D#5:2 E5:1 | B5s:4 A5:3 G#5:2 A5:1 B5:4 A5:3 G#5:2 A5:1 | C6q:5 A5e:2 B5:3 | C6e:4 B5:3 A5:1 G#5:2 | A5e:3 E5:1 F5:4 D5:2 | C5q:3 B4:2 | A4q:1 rq',
+    rh: '!p B4s:4 A4:3 G#4:2 A4:1 | C5e:3 re D5s:3 C5:2 B4:1 C5:2 | E5e:4 re F5s:4 E5:3 D#5:2 E5:1 | B5s:4 A5:3 G#5:2 A5:1 B5:4 A5:3 G#5:2 A5:1 | C6q:5 A5e:2 C6:5 | B5e:5 F#5+A5e:24 E5+G5e:13 F#5+A5e:24 | B5e:5 F#5+A5e:24 E5+G5e:13 F#5+A5e:24 | B5e:5 F#5+A5e:24 E5+G5e:13 D#5+F#5e:24 | E5q:3 !mp B4s:4 A4:3 G#4:2 A4:1 | C5e:3 re D5s:3 C5:2 B4:1 C5:2 | E5e:4 re F5s:4 E5:3 D#5:2 E5:1 | B5s:4 A5:3 G#5:2 A5:1 B5:4 A5:3 G#5:2 A5:1 | C6q:5 A5e:2 B5:3 | C6e:4 B5:3 A5:1 G#5:2 | A5e:3 E5:1 F5:2 D5:1 | C5q:3 B4:2 | A4q:1 rq',
     lh: 'rq | A3e:5 C4+E4e:21 C4+E4e C4+E4e | A3e C4+E4e C4+E4e C4+E4e | A3e C4+E4e A3e C4+E4e | A3e C4+E4e C4+E4e C4+E4e | E3e:5 B3+E4e:21 B3+E4e B3+E4e | E3e B3+E4e B3+E4e B3+E4e | E3e B3+E4e B2e B3e | E3q rq | A3e:5 C4+E4e:21 C4+E4e C4+E4e | A3e C4+E4e C4+E4e C4+E4e | A3e C4+E4e A3e C4+E4e | F3e:5 A3+D#4e:21 A3+D#4e A3+D#4e | E3e:5 A3+E4e:21 D3e:5 F3+B3e:21 | C3e:5 E3+A3e:21 D3e:5 F3+B3e:21 | E3+A3e:41 E3+A3e E3+G#3e:42 E3+G#3e | A2+A3q:51 rq',
   },
   {
@@ -242,7 +242,7 @@ export const SONGS_CLASSICAL = [
     tags: ['classical'], style: 'classical',
     chords: 'G | G | D7 | D7 | G | D7/G | G | D7/G | G D/A G/B D/F# | G:1 Am:1 G/B:2',
     blurb: 'Mozart’s bright serenade for strings: a confident call up the G major chord, then a cheeky rocketing tune.',
-    rh: '!f G4q:4 re D4e:1 G4q:4 re D4e:1 | G4e:2 D4:1 G4:2 B4:3 D5q:5 rq | C5q:5 re A4e:3 C5q:5 re A4e:3 | C5e:5 A4:3 F#4:2 A4:3 D4q:1 rq | G4e:1 re G4q.:1 B4e:3 A4:2 G4:1 | G4e:2 F#4:1 F#4q.:1 A4e:2 C5:4 F#4:1 | A4e:2 G4:1 G4q.:1 B4e:3 A4:2 G4:1 | G4e:2 F#4:1 F#4q.:1 A4e:2 C5:4 F#4:1 | G4e:3 G4:3 F#4:2 E4s:1 F#4:2 G4e:3 G4:3 A4:4 G4s:3 A4:4 | B4e:2 B4:2 C5:3 B4s:2 C5:3 D5q:5 rq',
+    rh: '!f G4q:4 re D4e:1 G4q:4 re D4e:1 | G4e:2 D4:1 G4:2 B4:3 D5q:5 rq | C5q:5 re A4e:3 C5q:5 re A4e:3 | C5e:5 A4:3 F#4:2 A4:3 D4q:1 rq | G4e:1 re G4q.:1 B4e:3 A4:2 G4:1 | G4e:2 F#4:1 F#4q.:1 A4e:2 C5:4 F#4:1 | A4e:2 G4:1 G4q.:1 B4e:3 A4:2 G4:1 | G4e:2 F#4:1 F#4q.:1 A4e:2 C5:4 F#4:1 | G4e:3 G4:3 F#4:2 E4s:1 F#4:2 G4e:3 G4:3 A4:4 G4s:3 A4:4 | B4e:1 B4:1 C5:2 B4s:1 C5:2 D5q:3 rq',
     lh: `!f G3q:1 re D3e:4 G3q:1 re D3e:4 | G3e:3 D3:5 G3:3 B3:2 D4q:1 rq | C4q:1 re A3e:3 C4q:1 re A3e:3 | C4e:1 A3:2 F#3:4 A3:2 D3q:5 rq | G3e:1 ${rep('G3e', 7)} | ${rep('G3e', 8)} | ${rep('G3e', 8)} | ${rep('G3e', 8)} | G3e:3 G3 A3:2 A3 B3:1 B3 F#3:4 F#3 | G3e:3 G3 A3:2 A3 B3q:1 rq`,
   },
 ];

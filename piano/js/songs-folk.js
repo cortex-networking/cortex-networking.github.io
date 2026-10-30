@@ -26,7 +26,7 @@ export const SONGS_FOLK = [
     chords: 'C | C G | C G | C | C | C G | C G | C | G | F | G | G | C | C G | C G | C',
     blurb: 'A moonlit French folk song that stays in C position apart from one short trip down to G.',
     rh: 'C4q:1 C4 C4 D4:2 | E4h:3 D4h:2 | C4q:1 E4:3 D4:2 D4 | C4w:1 | C4q C4 C4 D4 | E4h D4h | C4q E4 D4 D4 | C4w | D4q:5 D4 D4 D4 | A3h:2 A3h | D4q:5 C4:4 B3:3 A3:2 | G3w:1 | C4q:1 C4 C4 D4:2 | E4h:3 D4h:2 | C4q:1 E4:3 D4:2 D4 | C4w:1',
-    lh: 'C3w:5 | C3h G3h:1 | C3h G3h | C3w:5 | C3w | C3h G3h | C3h G3h | C3w | G3w:1 | F3w:2 | G3w:1 | G3w | C3w:5 | C3h G3h:1 | C3h G3h | C3w:5',
+    lh: 'C3w:5 | C3h G3h:1 | C3h G3h | C3w:5 | C3w | C3h G3h | C3h G3h | C3w | G3w:1 | F3w:2 | G3w:1 | B2w:5 | C3w:5 | C3h G3h:1 | C3h G3h | C3w:5',
   },
   {
     id: 'twinkle', title: 'Twinkle, Twinkle, Little Star', composer: 'Traditional (France)', year: 1761, level: 2, key: 'C', time: [4, 4], tempo: 100,
@@ -66,7 +66,7 @@ export const SONGS_FOLK = [
     chords: 'C | C G | C | C G | C | F C | G | C',
     blurb: 'A cheeky fife-and-drum tune from the American Revolution that marches along in steady quarter notes.',
     rh: 'C4q:1 C4 D4:2 E4:3 | C4:1 E4:3 D4:2 G3 | C4:1 C4 D4:2 E4:3 | C4h:1 B3h | C4q:1 C4 D4:2 E4:3 | F4:4 E4:3 D4:2 C4:1 | B3 G3 A3 B3 | C4h C4h',
-    lh: 'C3w:5 | C3h G3h:1 | C3w:5 | C3h G3h:1 | C3w:5 | F3h:2 C3h:5 | G3w:1 | C3w:5',
+    lh: 'C3w:5 | C3h B2h:5 | C3w:5 | C3h G3h:1 | C3w:5 | F3h:2 C3h:5 | B2w:5 | C3w:5',
   },
   {
     id: 'jingle-bells', title: 'Jingle Bells', composer: 'James Lord Pierpont', year: 1857, level: 3, key: 'C', time: [4, 4], tempo: 120,
@@ -88,9 +88,9 @@ export const SONGS_FOLK = [
   {
     id: 'korobeiniki', title: 'Korobeiniki', composer: 'Traditional (Russia)', year: 1861,
     level: 3, key: 'Am', time: [4, 4], tempo: 116, tags: ['games', 'folk'], style: 'rock',
-    blurb: 'The Russian peddlers’ song the whole world knows from a falling-blocks video game: a minor-key tune that never stops moving.',
+    blurb: 'The Russian peddlers’ song in its folk form, with the dotted rhythm it was sung to. A falling-blocks video game later made a faster variant world-famous.',
     chords: 'E | Am | E | Am | Dm | Am | E | Am | E | Am | E | Am | Dm | Am | E | Am',
-    rh: '!mf E5q:5 B4e:2 C5e:3 D5q:4 C5e:3 B4e:2 | A4q:1 A4e:1 C5e:3 E5q:5 D5e:4 C5e:3 | B4q.:2 C5e:3 D5q:4 E5q:5 | C5q:3 A4q:1 A4h:1 | D5q.:2 F5e:3 A5q:5 G5e:4 F5e:3 | E5q.:2 C5e:1 E5q:3 D5e:2 C5e:1 | B4q:1 B4e:1 C5e:2 D5q:3 E5q:4 | C5q:2 A4q:1 A4h:1 | !f E5q:5 B4e:2 C5e:3 D5q:4 C5e:3 B4e:2 | A4q:1 A4e:1 C5e:3 E5q:5 D5e:4 C5e:3 | B4q.:2 C5e:3 D5q:4 E5q:5 | C5q:3 A4q:1 A4h:1 | D5q.:2 F5e:3 A5q:5 G5e:4 F5e:3 | E5q.:2 C5e:1 E5q:3 D5e:2 C5e:1 | B4q:1 B4e:1 C5e:2 D5q:3 E5q:4 | C5q:2 A4q:1 A4h:1',
+    rh: '!mf E4q.:1 G#4e:3 B4q:5 G#4e:3 E4e:1 | A4q.:1 C5e:2 E5q:5 D5e:4 C5e:3 | B4q.:2 C5e:3 D5q:4 E5q:5 | C5q:3 A4q:1 A4h:1 | F5q.:3 G5e:4 A5q:5 G5e:4 F5e:3 | E5q.:2 F5e:3 E5q:2 D5e:1 C5e:2 | B4q.:1 C5e:2 D5q:3 E5q:4 | C5q:2 A4q:1 A4h:1 | !f E4q.:1 G#4e:3 B4q:5 G#4e:3 E4e:1 | A4q.:1 C5e:2 E5q:5 D5e:4 C5e:3 | B4q.:2 C5e:3 D5q:4 E5q:5 | C5q:3 A4q:1 A4h:1 | F5q.:3 G5e:4 A5q:5 G5e:4 F5e:3 | E5q.:2 F5e:3 E5q:2 D5e:1 C5e:2 | B4q.:1 C5e:2 D5q:3 E5q:4 | C5q:2 A4q:1 A4h:1',
     lh: 'E2q:5 E3:1 E2 E3 | A2:5 A3:1 A2 A3 | E2:5 E3:1 E2 E3 | A2:5 A3:1 A2 A3 | D2:5 D3:1 D2 D3 | A2:5 A3:1 A2 A3 | E2:5 E3:1 E2 E3 | A2h:5 A2h | E2e:5 E3:1 E2 E3 E2 E3 E2 E3 | A2:5 A3:1 A2 A3 A2 A3 A2 A3 | E2:5 E3:1 E2 E3 E2 E3 E2 E3 | A2:5 A3:1 A2 A3 A2 A3 A2 A3 | D2:5 D3:1 D2 D3 D2 D3 D2 D3 | A2:5 A3:1 A2 A3 A2 A3 A2 A3 | E2:5 E3:1 E2 E3 E2 E3 E2 E3 | A2h:5 A2h',
   },
   {
@@ -150,7 +150,7 @@ export const SONGS_FOLK = [
     lh: 'rh. | rh. | rh. | rh. | !mp D3h.:1 | C3h.:2 | Bb2h.:3 | A2h.:4 | !mf Bb2+D3h.:31 | F2+C3h.:51 | G2+Bb2h.:42 | D2+A2h.:51 | F3q:1 E3e:2 F3e:1 D3q:3 | F3q E3e F3e D3q | F3q E3e F3e D3q | F3q E3e F3e D3q | !f F3q:1 E3e:2 F3e:1 D3q:3 | F3q E3e F3e D3q | F3q E3e F3e D3q | F3q E3e F3e D3q | !mf A2+E3h.:51 | A2+G3h.:51 | A2+E3h.:51 | A2+G3h:51 Bb2q:4 | !mp C3h.:1 | Bb2h.:2 | A2h.:3 | G2h.:4 | !p F3q:1 E3e:2 F3e:1 D3q:3 | F3q E3e F3e D3q | F3q E3e F3e D3q | D3h.:3',
   },
   {
-    id: 'kalinka', title: 'Kalinka', composer: 'Ivan Larionov', year: 1860, level: 2, key: 'Dm', time: [2, 4], tempo: 104, pickup: 1,
+    id: 'kalinka', title: 'Kalinka', composer: 'Ivan Larionov', year: 1860, level: 3, key: 'Dm', time: [2, 4], tempo: 104, pickup: 1,
     tags: ['folk'], style: 'folk',
     chords: 'A7 | A7 | A7 | Dm | A7 | A7 | A7 | Dm | A7 | A7 | A7 | Dm | A7 | A7 | A7 | Dm',
     blurb: 'The Russian dance-song chorus that singers traditionally speed up each time round; your right hand never leaves five neighbouring keys.',

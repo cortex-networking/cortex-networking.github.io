@@ -1,5 +1,6 @@
 // Adaptive coach: classifies mistakes, tracks skill mastery, and writes targeted practice.
 import { pc, isBlack, spell, noteName, buildScore } from './theory.js';
+import { profileFor } from './controls.js';
 
 const DAY = 86400000;
 
@@ -34,8 +35,12 @@ export function classifyPitch(expected, played, key = 'C') {
 /** Copy bars [fromBar, toBar] of a score (bar 0 = first bar or pickup) into a new score. */
 export function excerpt(score, fromBar, toBar, hands = 'B') {
   const starts = [0, ...score.barlines, score.length];
-  const a = starts[Math.max(0, fromBar)] ?? 0;
-  const b = starts[Math.min(starts.length - 1, toBar + 1)] ?? score.length;
+  // bars past the end (a stored context from an older version of a song) mean the last bar,
+  // never "from bar 0 to the end"
+  const last = Math.max(0, starts.length - 2);
+  const from = Math.min(Math.max(0, fromBar), last);
+  const to = Math.min(Math.max(from, toBar), last);
+  const a = starts[from], b = starts[to + 1];
   const keep = score.events.filter((e) => e.t >= a - 1e-6 && e.t < b - 1e-6 && (hands === 'B' || e.hand === hands));
   const map = new Map();
   const events = keep.map((e, i) => { const c = { ...e, t: e.t - a, i }; map.set(e, c); return c; });
@@ -43,6 +48,13 @@ export function excerpt(score, fromBar, toBar, hands = 'B') {
     if (c.tieTo) c.tieTo = map.get(c.tieTo) || undefined;
     if (c.tiedFrom) c.tiedFrom = map.get(c.tiedFrom) || undefined;
     if (c.tieTo === undefined) delete c.tieTo;
+  }
+  // sounding length only counts the tied notes that are inside the excerpt
+  for (const c of events) {
+    if (c.rest || c.tiedFrom) continue;
+    let sd = c.d;
+    for (let n = c.tieTo; n; n = n.tieTo) sd += n.d;
+    c.sd = sd;
   }
   return {
     ...score, events, notes: events.filter((e) => !e.rest && !e.tiedFrom),
@@ -121,9 +133,10 @@ export class Coach {
    */
   record(type, info = {}, tracker = this.current) {
     let cat = type;
-    if (type === 'hit') { if (tracker) tracker.hits++; return null; }
+    if (type === 'hit') { this._hits = (this._hits || 0) + 1; if (tracker) tracker.hits++; return null; }
     if (type === 'wrong-pitch') {
       cat = classifyPitch(info.expected, info.played, info.key);
+      this._shiftCheck(info.expected, info.played);
       if (tracker) tracker.confusions.push([info.expected, info.played]);
       const k = `${info.expected}>${info.played}`;
       this.data.confusions[k] = (this.data.confusions[k] || 0) + 1;
@@ -152,6 +165,32 @@ export class Coach {
     }
     this._save();
     return cat;
+  }
+
+  /**
+   * Spot a keyboard whose octave or transpose buttons have been bumped: several wrong notes in a
+   * row that are all off by the same amount (12 for an octave) with nothing right in between.
+   */
+  _shiftCheck(expected, played) {
+    if (expected === undefined || played === undefined) return;
+    const now = Date.now();
+    const diff = played - expected;
+    const run = (this._shift && this._shift.diff === diff && now - this._shift.at < 20000 && this._shift.hitsAt === this._hits) ? this._shift : { diff, n: 0 };
+    run.n++; run.at = now; run.hitsAt = this._hits;
+    this._shift = run;
+    const need = Math.abs(diff) % 12 === 0 ? 3 : 4;
+    if (diff === 0 || run.n < need || (this._shiftToldAt && now - this._shiftToldAt < 60000)) return;
+    this._shiftToldAt = now;
+    const dev = this.app.input?.devices?.[0];
+    const prof = profileFor(dev?.name || '');
+    let msg;
+    if (Math.abs(diff) % 12 === 0) {
+      const n = Math.abs(diff) / 12;
+      msg = `Your keyboard sounds ${n === 1 ? 'an octave' : `${n} octaves`} ${diff > 0 ? 'higher' : 'lower'} than the music. If you are playing the right keys, ${diff > 0 ? prof.octaveDown : prof.octaveUp}.`;
+    } else {
+      msg = `Every note is coming out ${Math.abs(diff)} half step${Math.abs(diff) > 1 ? 's' : ''} ${diff > 0 ? 'high' : 'low'}. If you are playing the right keys, ${prof.transpose}.`;
+    }
+    this.app.ui?.toast?.(msg, 9000);
   }
 
   /** Finish an activity: update skills, store a replayable context for the worst problem. */
@@ -212,9 +251,12 @@ export class Coach {
     const tempo = ctx.score?.tempo || 80;
     const staves = ctx.staves || (hands === 'L' ? 'bass' : hands === 'R' ? 'treble' : 'grand');
     const bars = ctx.bars && ctx.bars.length ? ctx.bars : [0];
-    const lo = Math.max(0, Math.min(...bars)), hi = Math.min(lo + 1, Math.max(...bars));
+    const lastBar = ctx.score ? ctx.score.barlines.length : Infinity;
+    const lo = Math.min(lastBar, Math.max(0, Math.min(...bars))), hi = Math.min(lo + 1, lastBar, Math.max(lo, ...bars));
     const passage = ctx.score ? excerpt(ctx.score, lo, hi, hands) : null;
     const usable = passage && passage.notes.length >= 2;
+    // timed steps name their hands: lesson.js plays only the right hand of a two-hand score otherwise
+    const ph = passage && passage.hands.R && passage.hands.L ? 'B' : passage?.hands.L ? 'L' : 'R';
     const conf = (ctx.confusions || []).filter(([e]) => e !== undefined);
     const expected = [...new Set(conf.map(([e]) => e))].slice(0, 4);
     const steps = [];
@@ -262,7 +304,7 @@ export class Coach {
             if (phrase.length >= 3) steps.push({ type: 'game', game: 'aliens', params: { phrases: [phrase], count: 1, reps: 3 }, pass: 0.7, text: `Aliens! They play ${where}; copy them with the right fingers.` });
           }
           steps.push({ type: 'seq', score: passage, staves, text: 'Once more, a little more smoothly.' });
-          steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.7, text: 'Now in time, at a slower tempo.' });
+          steps.push({ type: 'rhythm', score: passage, hands: ph, staves, tempoScale: 0.7, text: 'Now in time, at a slower tempo.' });
         } else {
           steps.push({ type: 'seq', rh: 'C4q:1 D4:2 E4:3 F4:4 | G4:5 F4:4 E4:3 D4:2 | C4q:1 E4:3 D4:2 F4:4 | E4:3 G4:5 C4h:1', text: 'Keep each finger over its own key. Slow and exact beats fast and sloppy.' });
         }
@@ -277,7 +319,7 @@ export class Coach {
           : { type: 'game', game: 'roboman', params: { level: 0, bars: 4 }, pass: 0.7, text: 'Roboman: tap the short notes and hold the long ones, right on the click.' });
         if (usable) {
           steps.push({ type: 'tap', score: passage, tempoScale: 0.75, text: `Tap the rhythm of ${where} on any key. Only the timing counts.` });
-          steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.8, text: 'Now with the real notes, still a little slower.' });
+          steps.push({ type: 'rhythm', score: passage, hands: ph, staves, tempoScale: 0.8, text: 'Now with the real notes, still a little slower.' });
         } else {
           steps.push({ type: 'tap', rh: 'B4q B4 B4 B4 | B4h B4h | B4q B4 B4h | B4w', tempo: 72, text: 'Tap on any key, right with the clicks.' });
         }
@@ -287,7 +329,7 @@ export class Coach {
         steps.push({ type: 'say', text: 'Long notes need their full value. Keep the key down and count through the note: a half note is “one, two”, a whole note “one, two, three, four”.' });
         steps.push({ type: 'game', game: 'roboman', params: { rhythm: 'C4h C4h | C4w | C4q C4q C4h | C4w', tempo: 72 }, pass: 0.7, text: 'Roboman: hold each long note until its bridge reaches the other side.' });
         steps.push({ type: 'rhythm', rh: 'C4w | E4h G4h | E4h. rq | C4w', tempo: 72, text: 'Hold each note right up to the next one.' });
-        if (usable) steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.8, text: `Now ${where}, holding every long note.` });
+        if (usable) steps.push({ type: 'rhythm', score: passage, hands: ph, staves, tempoScale: 0.8, text: `Now ${where}, holding every long note.` });
         break;
       }
       case 'rest': {
@@ -301,7 +343,7 @@ export class Coach {
         steps.push({ type: 'say', text: 'When notes line up vertically, both hands press at exactly the same moment. Get both hands ready over their keys first, then play together.' });
         if (usable) {
           steps.push({ type: 'seq', score: passage, staves: 'grand', text: `${where[0].toUpperCase() + where.slice(1)}, hands together, as slowly as you like.` });
-          steps.push({ type: 'rhythm', score: passage, staves: 'grand', tempoScale: 0.7, text: 'Now in time, slower.' });
+          steps.push({ type: 'rhythm', score: passage, hands: ph, staves: 'grand', tempoScale: 0.7, text: 'Now in time, slower.' });
         } else {
           steps.push({ type: 'seq', rh: 'C4q:1 D4:2 E4:3 F4:4 | G4w:5', lh: 'C3q:5 B2:1 C3:5 D3:4 | C3w:5', text: 'Hands together, landing at the same moment.' });
         }
@@ -313,7 +355,10 @@ export class Coach {
         break;
       }
       case 'quiz': {
-        steps.push({ type: 'quiz', generator: ctx.topic || 'treble-notes', count: 6, text: 'A quick review.' });
+        // "quiz" is QuizRunner's topic for a lesson's own written questions: there is no generator
+        // for those, and a stand-in staff-reading quiz would test things the lesson hasn't taught,
+        // so the learner just gets "Try again"
+        if (ctx.topic && ctx.topic !== 'quiz') steps.push({ type: 'quiz', generator: ctx.topic, count: 6, text: 'A quick review.' });
         break;
       }
       default: break;

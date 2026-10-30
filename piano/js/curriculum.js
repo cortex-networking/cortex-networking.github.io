@@ -75,7 +75,7 @@ export const LESSONS = [
       { type: 'say', text: 'Each finger has a number. The thumb is 1, then 2, 3 and 4, and the little finger is 5. Both hands use the same numbers. Curve your fingers as if you were holding a small ball.' },
       { type: 'find', notes: [62], show: 'both', finger: 2, text: 'Keep your right thumb on middle C. D sits between the two black keys: play it with finger 2.' },
       { type: 'find', notes: [64], show: 'both', finger: 3, text: 'E is just to the right of the two black keys. Play it with finger 3.' },
-      { type: 'seq', rh: 'C4q:1 D4:2 E4:3 D4:2 | C4h:1 rh | E4q:3 D4:2 C4h:1 | E4q:3 D4:2 C4h:1', text: 'Walk up and back, then down the hill: E, D, C. The music waits for you, so take your time.' },
+      { type: 'seq', rh: 'C4q:1 D4:2 E4:3 D4:2 | C4w:1 | E4q:3 D4:2 C4h:1 | E4q:3 D4:2 C4h:1', text: 'Walk up and back, then down the hill: E, D, C. The music waits for you, so take your time.' },
       { type: 'find', pool: [60, 62, 64], count: 6, show: 'name', text: 'Play each note when its name appears. Nothing is lit, so use the black keys to find your way.' },
       {
         type: 'quiz', check: true, text: 'Check: answer by choosing, or by playing the key itself.',
@@ -161,7 +161,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play your first complete tune, Hot Cross Buns, an old English street cry. The computer plays a left-hand part along with you.' },
       { type: 'seq', rh: 'E4q:3 D4:2 C4h:1 | E4q:3 D4:2 C4h:1', text: 'The opening: E, D, C, played twice.' },
-      { type: 'seq', rh: 'C4e:1 C4 C4 C4 D4:2 D4 D4 D4 | E4q:3 D4:2 C4h:1', text: 'The middle: four quick Cs, four quick Ds, then home. You’ll learn exactly how quick in chapter 3; for now, play them in order.' },
+      { type: 'seq', rh: 'C4e:1 C4 C4 C4 D4:2 D4 D4 D4 | E4q:3 D4:2 C4h:1', text: 'The middle: four quick Cs, four quick Ds, then home. You’ll learn exactly how quick in chapter 6; for now, play them in order.' },
       { type: 'game', game: 'aliens', params: { song: 'hot-cross-buns', hands: 'R' }, pass: 0.6, text: 'The aliens teach you Hot Cross Buns phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'hot-cross-buns', mode: 'wait', hands: 'R', text: 'The whole tune. The music waits for each note, and the left hand plays along when you move on.' },
       { type: 'song', song: 'hot-cross-buns', mode: 'play', hands: 'R', tempo: 0.6, pass: 0.5, check: true, text: 'Check: now the music keeps moving. Listen to the clicks, then play each note as the line reaches it. It’s slow, and a few slips are fine.' },
@@ -499,8 +499,8 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play the left-hand part of Au Clair de la Lune, a French folk song, while the computer plays the melody you learned in chapter 1.' },
       { type: 'seq', lh: 'C3w:5 | C3h G3h:1 | C3h G3h | C3w:5', text: 'The first line of the left-hand part: C, then C and G.' },
-      { type: 'seq', lh: 'G3w:1 | F3w:2 | G3w:1 | G3w', text: 'The middle section moves to G and F. Your thumb plays G and finger 2 plays F.' },
-      { type: 'game', game: 'aliens', params: { song: 'au-clair', hands: 'R' }, pass: 0.6, text: 'The aliens teach you Au Clair de la Lune phrase by phrase: copy each phrase, then play the phrases joined together.' },
+      { type: 'seq', lh: 'G3w:1 | F3w:2 | G3w:1 | B2w:5', text: 'The middle section moves to G and F: your thumb plays G and finger 2 plays F. Then your little finger reaches down to B, just below C, ready to step back up to C.' },
+      { type: 'game', game: 'aliens', params: { song: 'au-clair', hands: 'L' }, pass: 0.6, text: 'The aliens teach you the left-hand part of Au Clair de la Lune phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'au-clair', mode: 'wait', hands: 'L', text: 'The whole song. You play the left hand; the melody plays as you go.' },
       { type: 'song', song: 'au-clair', mode: 'play', hands: 'L', tempo: 0.8, check: true, text: 'Check: now in time. Count the whole notes all the way to four.' },
     ],
@@ -820,8 +820,9 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play this chapter’s piece, a dark minor-key classic. Grieg wrote In the Hall of the Mountain King in 1875 for trolls closing in on a trapped hero. It starts quietly and creeps up in speed and volume.',
         altText: 'By the end of this lesson you’ll play this chapter’s piece, the opening of Beethoven’s Für Elise, a minor-key classic built on a restless turn between E and D♯.' },
-      { type: 'seq', rh: 'A3e:1 B3:2 C4:3 D4:4 E4:5 C4:3 E4q:5 | D#4e:4 B3:2 D#4q:4 D4e:4 B3:2 D4q:4', text: 'Two figures in A minor: a creeping climb, then the same shape sinking by a half step, from D♯ down to D. The black key sits right beside the white key it bends from.' },
+      { type: 'seq', rh: 'A3e:1 B3:2 C4:3 D4:4 E4:5 C4:3 E4q:5 | D#4e:4 B3:2 D#4q:4 D4e:4 Bb3:2 D4q:4', text: 'Two figures in A minor: a creeping climb, then the same shape sinking by a half step, from D♯ down to D. The black key sits right beside the white key it bends from.' },
       { type: 'seq', rh: 'E4e:5 D#4:4 E4:5 D#4:4 E4:5 B3:2 D4:4 C4:3 | A3h:1 rh', text: 'A restless turn around E and D♯ that settles on A. The black key sits right beside its white neighbour, so keep your fingers close to the keys.' },
+      { type: 'find', notes: [76, 77, 79, 81], show: 'both', text: 'This piece climbs higher than any note so far. E sits in the top space of the treble staff, F on the top line, G just above the staff, and A on a short ledger line above that. Play each one.' },
       { type: 'game', game: 'aliens', params: { song: 'hall-of-the-mountain-king', hands: 'R' }, pass: 0.6, text: 'The aliens teach you In the Hall of the Mountain King phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'hall-of-the-mountain-king', alt: 'fur-elise', mode: 'wait', hands: 'R', text: 'The whole piece at your own pace. The left hand plays along.' },
       { type: 'song', song: 'hall-of-the-mountain-king', alt: 'fur-elise', mode: 'play', hands: 'R', tempo: 0.6, pass: 0.6, check: true, text: 'Check: in time, at a slow tempo. Keep the eighth notes even.' },
@@ -924,7 +925,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play Greensleeves, an English ballad over four hundred years old. Its long-short rhythm and minor key give it a haunting, ancient sound.',
         altText: 'By the end of this lesson you’ll play Row, Row, Row Your Boat with both hands, the classic six-eight round.' },
-      { type: 'rhythm', time: [3, 4], key: 'Am', rh: 'A4h:1 C5q:3 | E5q.:5 D5e:4 C5q:3 | B4h:2 G#4q:1 | A4h.:1', tempo: 84, text: 'Warm up with the long-short rhythm from your minor waltz.' },
+      { type: 'tap', time: [6, 8], rh: 'B4q B4e B4e. B4s B4e | B4q B4e B4e. B4s B4e | B4q B4e B4e. B4s B4e | B4h.', tempo: 72, text: 'One new rhythm first. A dotted eighth and a sixteenth together take the time of two eighth notes: long, then very short, like a skip. In six-eight, count “1 and a”: the dotted eighth starts on 1 and the sixteenth slips in just before “a”. Any key works.' },
       { type: 'game', game: 'aliens', params: { song: 'greensleeves', hands: 'R' }, pass: 0.6, text: 'The aliens teach you Greensleeves phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'greensleeves', alt: 'row-your-boat', mode: 'wait', hands: 'R', text: 'The whole melody at your own pace. The left hand plays along.' },
       { type: 'song', song: 'greensleeves', alt: 'row-your-boat', mode: 'wait', hands: 'B', text: 'Now both hands, at your own pace.' },
@@ -1000,9 +1001,9 @@ export const LESSONS = [
       { type: 'say', text: 'A chord’s notes can be stacked in any order. With the root at the bottom, it’s in root position: C E G. Move the C to the top and you get first inversion: E G C. Move the E up too and it’s second inversion: G C E. It’s still C major every time.' },
       { type: 'seq', rh: 'C4+E4+G4h:135 E4+G4+C5h:125 | G4+C5+E5h:135 C5+E5+G5h:135', text: 'C major climbing through its inversions. Watch the gap in each shape move.' },
       { type: 'say', text: 'Here’s why inversions matter. Using them, C, F and G major sit right next to each other: C E G, then C F A, then B D G. Your hand barely moves. This progression, called one–four–five, is the backbone of thousands of songs.' },
-      { type: 'seq', rh: 'C4+E4+G4w:135 | C4+F4+A4w:125 | B3+D4+G4w:125 | C4+E4+G4w:135', text: 'C, F, G, C with the closest shapes. Keep your thumb near C the whole time.' },
-      { type: 'seq', rh: 'A3+C4+E4w:135 | A3+D4+F4w:125 | G#3+B3+E4w:125 | A3+C4+E4w:135', text: 'The same idea in A minor: A minor, D minor, E major (with G♯), A minor. That E major chord is what makes minor-key endings sound so final.' },
-      { type: 'rhythm', rh: 'C4+E4+G4h:135 C4+F4+A4h:125 | B3+D4+G4h:125 C4+E4+G4h:135 | A3+C4+E4h:135 A3+D4+F4h:125 | G#3+B3+E4h:125 A3+C4+E4h:135', lh: 'C3h:5 F3h:2 | G3h:1 C3h:5 | A2h:5 D3h:2 | E3h:1 A2h:5', tempo: 66, hands: 'B', check: true, text: 'Check: both progressions in time. The left hand plays each chord’s root.' },
+      { type: 'seq', rh: 'C4+E4+G4w:135 | C4+F4+A4w:135 | B3+D4+G4w:125 | C4+E4+G4w:135', text: 'C, F, G, C with the closest shapes. Keep your thumb near C the whole time.' },
+      { type: 'seq', rh: 'A3+C4+E4w:135 | A3+D4+F4w:135 | G#3+B3+E4w:125 | A3+C4+E4w:135', text: 'The same idea in A minor: A minor, D minor, E major (with G♯), A minor. That E major chord is what makes minor-key endings sound so final.' },
+      { type: 'rhythm', rh: 'C4+E4+G4h:135 C4+F4+A4h:135 | B3+D4+G4h:125 C4+E4+G4h:135 | A3+C4+E4h:135 A3+D4+F4h:135 | G#3+B3+E4h:125 A3+C4+E4h:135', lh: 'C3h:5 F3h:2 | G3h:1 C3h:5 | A2h:5 D3h:2 | E3h:1 A2h:5', tempo: 66, hands: 'B', check: true, text: 'Check: both progressions in time. The left hand plays each chord’s root.' },
     ],
   },
   {
@@ -1054,7 +1055,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play Iron Riff, an original piece built on power chords. Play it heavy, steady and in time.',
         altText: 'By the end of this lesson you’ll play Jingle Bells with both hands, a lively American song from 1857.' },
-      { type: 'rhythm', lh: 'E2+B2e:51 E2+B2 E2+B2 E2+B2 G2+D3q:51 E2+B2 | F2+C3q:51 F2+C3 E2+B2h', tempo: 80, hands: 'L', text: 'Warm up with the power-chord riff from earlier in this chapter.' },
+      { type: 'rhythm', lh: 'E2+B2e:51 E2+B2 E2+B2 E2+B2 E2+B2 E2+B2 G2+D3q:51 | C2+G2e:51 C2+G2 C2+G2 C2+G2 D2+A2e:51 D2+A2 D2+A2 D2+A2', tempo: 80, hands: 'L', text: 'Warm up with the first and third bars of the riff. Two shapes are new, and they sit even lower than E5: C5, with C on the second ledger line below the bass staff, and D5, with D between the two ledger lines. Keep fingers 5 and 1 in the same shape and move it down.' },
       { type: 'game', game: 'ripchord', params: { song: 'iron-riff', hands: 'L' }, pass: 0.6, text: 'Ripchord with the power chords of Iron Riff, in order, in your left hand. Hold each one before the timer runs out.' },
       { type: 'song', song: 'iron-riff', alt: 'jingle-bells', mode: 'wait', hands: 'L', text: 'Learn the left-hand part at your own pace. The right hand plays along.' },
       { type: 'song', song: 'iron-riff', alt: 'jingle-bells', mode: 'wait', hands: 'B', text: 'Now both hands at your own pace.' },
@@ -1157,8 +1158,8 @@ export const LESSONS = [
           { q: 'What does legato mean?', choices: ['Short and detached', 'Smooth and connected', 'Getting louder'], answer: 1 },
         ],
       },
-      { type: 'seq', rh: '!p E4h:1 A4h:3 | C5h:5 A4h:3 | B4h:3 D5h:5 | G#4w:1 | !f A4e:1 B4:2 C5:3 D5:1 E5:2 F5:3 G#5:4 A5:5 | E5h:5 C5h:3 | !p B4h:2 G#4h:1 | A4w:2', lh: 'A2e:5 E3:2 A3:1 E3:2 A2:5 E3:2 A3:1 E3:2 | F2:5 C3:2 F3:1 C3:2 F2:5 C3:2 F3:1 C3:2 | G2:5 D3:2 G3:1 D3:2 G2:5 D3:2 G3:1 D3:2 | E2:5 B2:2 E3:1 B2:2 E2:5 B2:2 E3:1 B2:2 | A2+E3w:51 | A2+E3w | E2+B2w:51 | A2+E3w:51', text: 'A short, dramatic piece: soft arpeggios, a loud scale run, a quiet ending. Learn it at your own pace.' },
-      { type: 'rhythm', rh: '!p E4h:1 A4h:3 | C5h:5 A4h:3 | B4h:3 D5h:5 | G#4w:1 | !f A4e:1 B4:2 C5:3 D5:1 E5:2 F5:3 G#5:4 A5:5 | E5h:5 C5h:3 | !p B4h:2 G#4h:1 | A4w:2', lh: 'A2e:5 E3:2 A3:1 E3:2 A2:5 E3:2 A3:1 E3:2 | F2:5 C3:2 F3:1 C3:2 F2:5 C3:2 F3:1 C3:2 | G2:5 D3:2 G3:1 D3:2 G2:5 D3:2 G3:1 D3:2 | E2:5 B2:2 E3:1 B2:2 E2:5 B2:2 E3:1 B2:2 | A2+E3w:51 | A2+E3w | E2+B2w:51 | A2+E3w:51', tempo: 60, hands: 'B', check: true, text: 'Check: the whole piece in time, hands together, with soft and loud.' },
+      { type: 'seq', rh: '!p E4h:1 A4h:3 | C5h:5 A4h:3 | B4h:3 D5h:5 | G#4w:1 | !f A4e:1 B4:2 C5:3 D5:1 E5:2 F5:3 G#5:4 A5:5 | E5h:5 C5h:3~ | !p C5q B4q:2 G#4h:1 | A4w:2', lh: 'A2e:5 E3:2 A3:1 E3:2 A2:5 E3:2 A3:1 E3:2 | F2:5 C3:2 F3:1 C3:2 F2:5 C3:2 F3:1 C3:2 | G2:5 D3:2 G3:1 D3:2 G2:5 D3:2 G3:1 D3:2 | E2:5 B2:2 E3:1 B2:2 E2:5 B2:2 E3:1 B2:2 | A2+E3w:51 | A2+E3w | E2+B2w:51 | A2+E3w:51', text: 'A short, dramatic piece: soft arpeggios, a loud scale run, then a quiet ending where the C is tied over the bar line. Learn it at your own pace.' },
+      { type: 'rhythm', rh: '!p E4h:1 A4h:3 | C5h:5 A4h:3 | B4h:3 D5h:5 | G#4w:1 | !f A4e:1 B4:2 C5:3 D5:1 E5:2 F5:3 G#5:4 A5:5 | E5h:5 C5h:3~ | !p C5q B4q:2 G#4h:1 | A4w:2', lh: 'A2e:5 E3:2 A3:1 E3:2 A2:5 E3:2 A3:1 E3:2 | F2:5 C3:2 F3:1 C3:2 F2:5 C3:2 F3:1 C3:2 | G2:5 D3:2 G3:1 D3:2 G2:5 D3:2 G3:1 D3:2 | E2:5 B2:2 E3:1 B2:2 E2:5 B2:2 E3:1 B2:2 | A2+E3w:51 | A2+E3w | E2+B2w:51 | A2+E3w:51', tempo: 60, hands: 'B', check: true, text: 'Check: the whole piece in time, hands together, with soft and loud.' },
     ],
   },
   {

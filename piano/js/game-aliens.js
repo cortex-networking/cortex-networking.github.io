@@ -1478,9 +1478,11 @@ export class Game extends ArcadeBase {
       const wp = worst >= 0 ? s.phrases[worst] : null;
       const work = wp ? `Phrase ${worst + 1}, ${this._bars(wp.fromBar, wp.toBar)} (${this.phraseErr[worst]} slip${this.phraseErr[worst] > 1 ? 's' : ''})` : 'None, a clean run';
       const all = learnedBars.size >= bars;
+      // every bar learned with a single slip somewhere: that's not "work on it next"
+      const advise = wp && (!all || this.phraseErr[worst] > 1);
       this.finish({
         score: this.score, passed, accuracy: acc,
-        detail: `${title}${part}${s.hand === 'L' ? ' (left hand)' : ''}: ${all ? 'every bar' : `${learnedBars.size} of ${bars} bars`} learned from memory.${wp ? ` Work on phrase ${worst + 1} (${this._bars(wp.fromBar, wp.toBar)}) next.` : all ? ' Now play it for real!' : ''}`,
+        detail: `${title}${part}${s.hand === 'L' ? ' (left hand)' : ''}: ${all ? 'every bar' : `${learnedBars.size} of ${bars} bars`} learned from memory.${advise ? ` Work on phrase ${worst + 1} (${this._bars(wp.fromBar, wp.toBar)}) next.` : all ? ' Now play it for real!' : ''}`,
         stats: [
           ['Song', `${title}${part}${s.hand === 'L' ? ', left hand' : ''}`],
           ['Learned from memory', `${learnedBars.size} of ${bars} bars`],

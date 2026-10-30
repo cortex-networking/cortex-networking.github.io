@@ -33,7 +33,7 @@ export const SONGS_EPIC = [
   },
   {
     id: 'night-on-bald-mountain', title: 'Night on Bald Mountain (brass theme)', composer: 'Modest Mussorgsky, arr. Rimsky-Korsakov', year: 1886,
-    level: 3, key: 'Dm', time: [4, 4], tempo: 120,
+    level: 4, key: 'Dm', time: [4, 4], tempo: 120,
     tags: ['epic', 'classical', 'games'], style: 'epic',
     blurb: 'Witches gather on a mountain at midnight: the right hand shivers on two notes while the left hand stomps out the brass theme, the one an animated film made famous.',
     chords: 'Dm | F | E | E:2 Dm:2 | Am/E:2 F:2 | G#dim7 | G#dim7:2 F/A:2 | Am/C | Am/C | Dm/C | Dm/C | Gm/Bb',
@@ -66,8 +66,8 @@ export const SONGS_EPIC = [
     blurb: 'The slow, unstoppable march that film-makers reach for in their darkest scenes. First the theme on one repeated note, then the famous singing countermelody over it.',
     chords: 'Am | E/G# | E | Am | Am:1.5 D/A:0.5 | C/G | G | C | Am | E/G# | E | Am | Am:1.5 D/A:0.5 | C/G | G | C | C | B | Bm:1.5 E/B:0.5 | A:1 Am:1 | Am | E/G#:1 Am:1 | E | Am',
     rh: `!pp E4q:1 E4e E4 | E4q E4 | ${dactyl('E4')} | E4q E4 | E4q E4e F#4:2 | G4q:3 G4 | ${dactyl('G4')} | G4q rq | `
-      + '!p C5h:3 | B4h:2 | B4s:2 C5:3 D5q:4 C5s:3 B4:2 | B4e:2 C5:3 C5q:3 | C5q.:3 C5s:3 D5:4 | D#5e:4 E5:5 E5 E5 | D5s:3 E5:4 F5q:5 E5s:4 D5:3 | D5e:3 E5:4 E5q:4 | '
-      + '!mf E5h:4 | D#5h:3 | D5e:3 B4s:1 C#5:2 D5e:3 E5s:4 D5:3 | D5e:3 C#5:2 C5q:2 | C5h:2 | B4q:1 C5:2 | B4s:1 C5:2 D5q:3 C5s:2 B4:1 | A4q:1 rq',
+      + '!p C5h:3 | B4h:2 | B4s:2 C5:3 D5q:4 C5s:3 B4:2 | B4e:2 C5:3 C5q:3 | C5q.:2 C5s:2 D5:3 | D#5e:4 E5:5 E5 E5 | D5s:3 E5:4 F5q:5 E5s:4 D5:3 | D5e:3 E5:4 E5q:4 | '
+      + '!mf E5h:4 | D#5h:3 | D5e:3 B4s:1 C#5:2 D5e:3 E5s:4 D5:3 | D5e:3 C#5:2 C5q:2 | C5h:2 | B4q:1 C5:2 | B4s:1 C5:2 D5q:4 C5s:3 B4:2 | A4q:1 rq',
     lh: `!pp A2q:1 A2e A2 | G#2q:2 G#2 | E2q:5 E2e E2 | A2q:1 A2 | ${dactyl('A2')} | G2q:2 G2 | ${dactyl('G2')} | C3q:1 rq | `
       + `!p E3q:3 E3e E3 | E3q E3 | ${dactyl('E3')} | E3q E3 | E3q E3e F#3:2 | G3q:1 G3 | ${dactyl('G3')} | G3q rq | `
       + '!mf G3q:3 G3e A3:2 | B3q:1 B3 | F#3q:4 F#3e G#3:3 | A3q:2 A3 | E3q:5 E3e E3 | E3q E3 | E3q F#3e:4 G#3:3 | A3q:2 rq',
@@ -125,7 +125,7 @@ export const SONGS_EPIC = [
     chords: 'Am | E | Am | E | Am | E | Am | E | A7 | Dm | G7 | C | Bdim | Am | F:1 E7:1 | Am',
     rh: '!mf A4e:1 rs A4s:1 A4 C5:3 B4:2 A4:1 | E5e:5 rs E4s:1 E4 G#4:3 F#4:2 E4:1 | A4e:1 rs A4s:1 A4 C5:3 B4:2 A4:1 | E5q:5 E4e:1 re | '
       + 'A4e:1 rs A4s:1 A4 C5:3 B4:2 A4:1 | E5e:5 rs E4s:1 E4 G#4:3 F#4:2 E4:1 | A4e:1 rs A4s:1 A4 C5:3 B4:2 A4:1 | E5q:5 E4e:1 re | '
-      + '!f A5e:3 rs A5s:3 A5 Bb5:4 A5:3 G5:2 | F5e:4 rs D5s:1 D5 F5:3 E5:2 D5:1 | G5e:4 rs G5s:4 G5 A5:5 G5:4 F5:3 | E5e:3 rs C5s:1 C5 E5:3 D5:2 C5:1 | '
+      + '!f A5e:4 rs A5s:4 A5 Bb5:5 A5:4 G5:3 | F5e:2 rs D5s:1 D5 F5:3 E5:2 D5:1 | G5e:4 rs G5s:4 G5 A5:5 G5:4 F5:3 | E5e:2 rs C5s:1 C5 E5:3 D5:2 C5:1 | '
       + 'F5e:4 rs B4s:1 B4 D5:3 C5:2 B4:1 | E5e:4 rs A4s:1 A4 C5:3 B4:2 A4:1 | F4e:1 rs D#5s:5 E4:1 E5:5 D5:4 B4:2 | A4q:1 A3e:1 re',
     lh: '!mf A2q:5 E3q:1 | E2q:5 B2q:1 | A2q:5 E3q:1 | E2+E3q:51 rq | A2q:5 E3q:1 | E2q:5 B2q:1 | A2q:5 E3q:1 | E2+E3q:51 rq | '
       + '!f A2q:5 C#3q:3 | D3q:1 A2q:4 | G2q:5 B2q:3 | C3q:2 G2q:5 | B2q:3 D3q:1 | A2q:5 E3q:1 | F2q:4 E2q:5 | A2q:5 rq',
@@ -141,7 +141,7 @@ export const SONGS_EPIC = [
       + '!p A4+F5h.:15 C5q:3 | A4q:2 F4:1 A4:2 C5:4 | C5+Eb5h:35 A4+D5h:24 | G5h.:5 D5q:3 | B4q:2 G4:1 B4:2 D5:4 | '
       + 'D5+F5h:24 B4+E5h:14 | A4+E5h:15 G#4+E5h:15 | A4+E5h:15 D5h:4 | G#4+D5q:15 A4+C5q:24 B4h:3 | E4+A4h.:14 rq',
     lh: '!f D2+D3h:51 D2+D3h | D3q:1 D3 rh | C#2+C#3h:51 C#2+C#3h | D3q:1 D3 rq D2e:5 D2 | E2q:4 F2q:3 rq F2e:3 F2 | '
-      + 'C#2q:5 D2q:4 rq D3e:1 C3e:2 | Bb2q:2 A2:3 G2:4 D2:5 | A2q:1 A2 rh | A2e:5 A2 Bb2:4 B2:3 C3:2 A2:4 Bb2:3 G2:5 | '
+      + 'C#2q:5 D2q:4 rq D3e:2 C3e:1 | Bb2q:2 A2:3 G2:4 D2:5 | A2q:1 A2 rh | A2e:5 A2 Bb2:4 B2:3 C3:2 A2:4 Bb2:3 G2:5 | '
       + `!p ${rep('F2e', 8)} | ${rep('F2e', 8)} | F#2h F#2h | ${rep('G2e', 8)} | ${rep('G2e', 8)} | `
       + 'G#2h G#2h | A2h B2h | C3h D3h | E3q:1 A2q:4 E2h:5 | A2+E3h.:51 rq',
   },
@@ -162,7 +162,7 @@ export const SONGS_EPIC = [
   },
   {
     id: 'zarathustra', title: 'Also sprach Zarathustra (sunrise)', composer: 'Richard Strauss', year: 1896,
-    level: 2, key: 'C', time: [4, 4], tempo: 60,
+    level: 3, key: 'C', time: [4, 4], tempo: 60,
     tags: ['epic', 'classical', 'games'], style: 'classical',
     blurb: 'The sunrise fanfare made famous by a 1968 space film: a low rumble, three rising trumpet notes, then a chord that flips from major to minor, and the second time from minor to major.',
     chords: 'C5 | C5 | C5 | C5 | Cm | Cm | C5 | C5 | C',
@@ -171,7 +171,7 @@ export const SONGS_EPIC = [
   },
   {
     id: 'hungarian-dance-5', title: 'Hungarian Dance No. 5', composer: 'Johannes Brahms', year: 1869,
-    level: 3, key: 'Gm', time: [2, 4], tempo: 100,
+    level: 4, key: 'Gm', time: [2, 4], tempo: 100,
     tags: ['classical', 'games'], style: 'march',
     blurb: 'Brahms’s fiery dance in G minor, a favourite of cartoons and comedy chases: a long-short swagger, then a whirl of sixteenths.',
     chords: 'Gm | Gm | Cm/G | Gm | Cm/G | Gm | D7/F# | Gm | Gm | Gm | Cm/G | Gm | Eb/G:1 Dm/F:1 | Cm/Eb:1 Bb/D:1 | D7 | Gm',
@@ -224,14 +224,14 @@ export const SONGS_EPIC = [
   },
   {
     id: 'william-tell-finale', title: 'William Tell Overture (finale)', composer: 'Gioachino Rossini', year: 1829,
-    level: 3, key: 'E', time: [2, 4], tempo: 108, pickup: 0.5,
+    level: 4, key: 'E', time: [2, 4], tempo: 108, pickup: 0.5,
     tags: ['classical', 'games', 'march'], style: 'march',
     blurb: 'The cavalry charge that ends an opera overture, famous as a TV cowboy theme: a galloping da-da-dum rhythm, then the whole tune again.',
     chords: 'E | E | E | B7 | E | E | B7 | E | E | E | E | B7 | E | E | B7 | E',
     rh: '!f B4s:1 B4 | B4e:1 B4s B4 B4e B4s B4 | E5e:2 F#5:3 G#5:4 B4s:1 B4 | B4e:1 B4s B4 E5e:2 G#5s:4 G#5 | F#5e:3 D#5:2 B4:1 B4s B4 | '
-      + 'B4e:1 B4s B4 B4e B4s B4 | E5e:2 F#5:3 G#5:4 E5s:2 G#5:4 | B5q:5 rs A5s:4 G#5:3 F#5:2 | E5e:2 G#5:4 E5:2 B4s:1 B4 | '
+      + 'B4e:1 B4s B4 B4e B4s B4 | E5e:2 F#5:3 G#5:4 E5s:2 G#5:4 | B5q:5 rs A5s:5 G#5:4 F#5:3 | E5e:2 G#5:4 E5:2 B4s:1 B4 | '
       + 'B4e:1 B4s B4 B4e B4s B4 | E5e:2 F#5:3 G#5:4 B4s:1 B4 | B4e:1 B4s B4 E5e:2 G#5s:4 G#5 | F#5e:3 D#5:2 B4:1 B4s B4 | '
-      + 'B4e:1 B4s B4 B4e B4s B4 | E5e:2 F#5:3 G#5:4 E5s:2 G#5:4 | B5q:5 rs A5s:4 G#5:3 F#5:2 | E5e:2 G#5:4 E5:2 re',
+      + 'B4e:1 B4s B4 B4e B4s B4 | E5e:2 F#5:3 G#5:4 E5s:2 G#5:4 | B5q:5 rs A5s:5 G#5:4 F#5:3 | E5e:2 G#5:4 E5:2 re',
     lh: 're | !f E2q:5 E3q:1 | E2q:5 E3q:1 | E2q:5 E3q:1 | B2q:3 F#3q:1 | E2q:5 E3q:1 | E2q:5 E3q:1 | B2q:3 F#3q:1 | E2q:5 E3q:1 | '
       + 'E2q:5 E3q:1 | E2q:5 E3q:1 | E2q:5 E3q:1 | B2q:3 F#3q:1 | E2q:5 E3q:1 | E2q:5 E3q:1 | B2q:3 F#3q:1 | E2+E3q:51 rq',
   },

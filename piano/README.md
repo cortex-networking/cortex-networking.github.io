@@ -15,7 +15,7 @@ Live at `/piano/`. Static files, no build step, no tracking, no accounts.
   octave, missed, early, late, hands, dynamics and so on). The coach tracks which ones keep
   coming back, writes short practice routines from the exact bars that went wrong, and puts
   the weakest skills on the home screen as "Today's practice".
-- **Songs**: 67 public-domain pieces with original arrangements, in collections (epic and dark,
+- **Songs**: 82 public-domain pieces with original arrangements, in collections (epic and dark,
   classical, folk, sea shanties, marches, game and film favorites, blues and rock, holiday).
   Wait mode, play-along (graded on timing), rhythm-only tapping and listen; right, left or
   both hands; the app can play the other hand. A backing band (bass, drums, pads, chords) is
@@ -35,7 +35,8 @@ Live at `/piano/`. Static files, no build step, no tracking, no accounts.
 - **Profiles**: several learners on one device, each with their own progress, interests,
   practice streak and 14-day practice chart.
 
-Progress is saved in the browser's local storage only.
+Progress is saved in the browser's local storage only. Damaged or old saved data is repaired on
+load rather than stopping the app, and if the browser refuses to save, the app says so once.
 
 ## Input and sound
 
@@ -47,6 +48,11 @@ Progress is saved in the browser's local storage only.
   electric piano, organ and the band voices. Demos, the other hand and the band can be routed
   to a MIDI output such as a digital piano.
 - Latency compensation for play-along grading is in Settings.
+- Keyboards with knobs, faders, buttons and pads (the Alesis QX61 is recognised by name): pads on
+  MIDI channel 10 never count as notes, and Settings, under Keyboard controls, gives any control a
+  job (start, stop, listen, next/previous song, volume, band volume, tempo), with a guided setup
+  and a touch check that sets the loud and soft thresholds to the player's own touch.
+- Unplugging a keyboard with a key or the pedal down lets them go.
 
 ## Files
 
@@ -84,3 +90,23 @@ Durations are `w h q e s` (add `.` for dotted) and carry forward; `r` is a rest;
 `C4+E4+G4` is a chord; `:3` is a fingering; `~` ties into the next note; `!p` / `!f` set the
 dynamic; `pickup: 1` gives a one-beat pickup bar. Keep every bar the right length.
 Chord charts have one chord per bar, or `C:3 G7:1` to split a bar by beats.
+
+## Testing
+
+From the repository root, with Node 22 or later (nothing is installed into the repo):
+
+```
+node --test "piano/tests/*.test.mjs"
+npx -y -p eslint@9 eslint -c piano/tests/eslint.config.js piano/js piano/tests
+```
+
+The unit tests cover the voice parser, every song and lesson piece (lengths, ranges, chord charts,
+playable fingerings, no key needed by both hands at once), the backing band, the coach's mistake
+categories and remedies, the lesson runner, the timing engine, the arcade's song tools and saved
+data. A new song that breaks a rule fails `songs.test.mjs` or `content.test.mjs`.
+
+## Releasing
+
+`index.html` loads `js/app.js?v=<date>`. Change that date on every release so a fresh `index.html`
+never pairs with a cached `app.js`. If a deploy is caught half finished, a small guard in
+`index.html` refetches the modules once and otherwise shows a Reload button.
