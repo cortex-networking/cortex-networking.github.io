@@ -161,7 +161,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this lesson you’ll play your first complete tune, Hot Cross Buns, an old English street cry. The computer plays a left-hand part along with you.' },
       { type: 'seq', rh: 'E4q:3 D4:2 C4h:1 | E4q:3 D4:2 C4h:1', text: 'The opening: E, D, C, played twice.' },
-      { type: 'seq', rh: 'C4e:1 C4 C4 C4 D4:2 D4 D4 D4 | E4q:3 D4:2 C4h:1', text: 'The middle: four quick Cs, four quick Ds, then home. You’ll learn exactly how quick in chapter 3; for now, play them in order.' },
+      { type: 'seq', rh: 'C4e:1 C4 C4 C4 D4:2 D4 D4 D4 | E4q:3 D4:2 C4h:1', text: 'The middle: four quick Cs, four quick Ds, then home. You’ll learn exactly how quick in chapter 6; for now, play them in order.' },
       { type: 'game', game: 'aliens', params: { song: 'hot-cross-buns', hands: 'R' }, pass: 0.6, text: 'The aliens teach you Hot Cross Buns phrase by phrase: copy each phrase, then play the phrases joined together.' },
       { type: 'song', song: 'hot-cross-buns', mode: 'wait', hands: 'R', text: 'The whole tune. The music waits for each note, and the left hand plays along when you move on.' },
       { type: 'song', song: 'hot-cross-buns', mode: 'play', hands: 'R', tempo: 0.6, pass: 0.5, check: true, text: 'Check: now the music keeps moving. Listen to the clicks, then play each note as the line reaches it. It’s slow, and a few slips are fine.' },
@@ -1001,9 +1001,9 @@ export const LESSONS = [
       { type: 'say', text: 'A chord’s notes can be stacked in any order. With the root at the bottom, it’s in root position: C E G. Move the C to the top and you get first inversion: E G C. Move the E up too and it’s second inversion: G C E. It’s still C major every time.' },
       { type: 'seq', rh: 'C4+E4+G4h:135 E4+G4+C5h:125 | G4+C5+E5h:135 C5+E5+G5h:135', text: 'C major climbing through its inversions. Watch the gap in each shape move.' },
       { type: 'say', text: 'Here’s why inversions matter. Using them, C, F and G major sit right next to each other: C E G, then C F A, then B D G. Your hand barely moves. This progression, called one–four–five, is the backbone of thousands of songs.' },
-      { type: 'seq', rh: 'C4+E4+G4w:135 | C4+F4+A4w:125 | B3+D4+G4w:125 | C4+E4+G4w:135', text: 'C, F, G, C with the closest shapes. Keep your thumb near C the whole time.' },
-      { type: 'seq', rh: 'A3+C4+E4w:135 | A3+D4+F4w:125 | G#3+B3+E4w:125 | A3+C4+E4w:135', text: 'The same idea in A minor: A minor, D minor, E major (with G♯), A minor. That E major chord is what makes minor-key endings sound so final.' },
-      { type: 'rhythm', rh: 'C4+E4+G4h:135 C4+F4+A4h:125 | B3+D4+G4h:125 C4+E4+G4h:135 | A3+C4+E4h:135 A3+D4+F4h:125 | G#3+B3+E4h:125 A3+C4+E4h:135', lh: 'C3h:5 F3h:2 | G3h:1 C3h:5 | A2h:5 D3h:2 | E3h:1 A2h:5', tempo: 66, hands: 'B', check: true, text: 'Check: both progressions in time. The left hand plays each chord’s root.' },
+      { type: 'seq', rh: 'C4+E4+G4w:135 | C4+F4+A4w:135 | B3+D4+G4w:125 | C4+E4+G4w:135', text: 'C, F, G, C with the closest shapes. Keep your thumb near C the whole time.' },
+      { type: 'seq', rh: 'A3+C4+E4w:135 | A3+D4+F4w:135 | G#3+B3+E4w:125 | A3+C4+E4w:135', text: 'The same idea in A minor: A minor, D minor, E major (with G♯), A minor. That E major chord is what makes minor-key endings sound so final.' },
+      { type: 'rhythm', rh: 'C4+E4+G4h:135 C4+F4+A4h:135 | B3+D4+G4h:125 C4+E4+G4h:135 | A3+C4+E4h:135 A3+D4+F4h:135 | G#3+B3+E4h:125 A3+C4+E4h:135', lh: 'C3h:5 F3h:2 | G3h:1 C3h:5 | A2h:5 D3h:2 | E3h:1 A2h:5', tempo: 66, hands: 'B', check: true, text: 'Check: both progressions in time. The left hand plays each chord’s root.' },
     ],
   },
   {
@@ -1158,8 +1158,8 @@ export const LESSONS = [
           { q: 'What does legato mean?', choices: ['Short and detached', 'Smooth and connected', 'Getting louder'], answer: 1 },
         ],
       },
-      { type: 'seq', rh: '!p E4h:1 A4h:3 | C5h:5 A4h:3 | B4h:3 D5h:5 | G#4w:1 | !f A4e:1 B4:2 C5:3 D5:1 E5:2 F5:3 G#5:4 A5:5 | E5h:5 C5h:3 | !p B4h:2 G#4h:1 | A4w:2', lh: 'A2e:5 E3:2 A3:1 E3:2 A2:5 E3:2 A3:1 E3:2 | F2:5 C3:2 F3:1 C3:2 F2:5 C3:2 F3:1 C3:2 | G2:5 D3:2 G3:1 D3:2 G2:5 D3:2 G3:1 D3:2 | E2:5 B2:2 E3:1 B2:2 E2:5 B2:2 E3:1 B2:2 | A2+E3w:51 | A2+E3w | E2+B2w:51 | A2+E3w:51', text: 'A short, dramatic piece: soft arpeggios, a loud scale run, a quiet ending. Learn it at your own pace.' },
-      { type: 'rhythm', rh: '!p E4h:1 A4h:3 | C5h:5 A4h:3 | B4h:3 D5h:5 | G#4w:1 | !f A4e:1 B4:2 C5:3 D5:1 E5:2 F5:3 G#5:4 A5:5 | E5h:5 C5h:3 | !p B4h:2 G#4h:1 | A4w:2', lh: 'A2e:5 E3:2 A3:1 E3:2 A2:5 E3:2 A3:1 E3:2 | F2:5 C3:2 F3:1 C3:2 F2:5 C3:2 F3:1 C3:2 | G2:5 D3:2 G3:1 D3:2 G2:5 D3:2 G3:1 D3:2 | E2:5 B2:2 E3:1 B2:2 E2:5 B2:2 E3:1 B2:2 | A2+E3w:51 | A2+E3w | E2+B2w:51 | A2+E3w:51', tempo: 60, hands: 'B', check: true, text: 'Check: the whole piece in time, hands together, with soft and loud.' },
+      { type: 'seq', rh: '!p E4h:1 A4h:3 | C5h:5 A4h:3 | B4h:3 D5h:5 | G#4w:1 | !f A4e:1 B4:2 C5:3 D5:1 E5:2 F5:3 G#5:4 A5:5 | E5h:5 C5h:3~ | !p C5q B4q:2 G#4h:1 | A4w:2', lh: 'A2e:5 E3:2 A3:1 E3:2 A2:5 E3:2 A3:1 E3:2 | F2:5 C3:2 F3:1 C3:2 F2:5 C3:2 F3:1 C3:2 | G2:5 D3:2 G3:1 D3:2 G2:5 D3:2 G3:1 D3:2 | E2:5 B2:2 E3:1 B2:2 E2:5 B2:2 E3:1 B2:2 | A2+E3w:51 | A2+E3w | E2+B2w:51 | A2+E3w:51', text: 'A short, dramatic piece: soft arpeggios, a loud scale run, then a quiet ending where the C is tied over the bar line. Learn it at your own pace.' },
+      { type: 'rhythm', rh: '!p E4h:1 A4h:3 | C5h:5 A4h:3 | B4h:3 D5h:5 | G#4w:1 | !f A4e:1 B4:2 C5:3 D5:1 E5:2 F5:3 G#5:4 A5:5 | E5h:5 C5h:3~ | !p C5q B4q:2 G#4h:1 | A4w:2', lh: 'A2e:5 E3:2 A3:1 E3:2 A2:5 E3:2 A3:1 E3:2 | F2:5 C3:2 F3:1 C3:2 F2:5 C3:2 F3:1 C3:2 | G2:5 D3:2 G3:1 D3:2 G2:5 D3:2 G3:1 D3:2 | E2:5 B2:2 E3:1 B2:2 E2:5 B2:2 E3:1 B2:2 | A2+E3w:51 | A2+E3w | E2+B2w:51 | A2+E3w:51', tempo: 60, hands: 'B', check: true, text: 'Check: the whole piece in time, hands together, with soft and loud.' },
     ],
   },
   {
