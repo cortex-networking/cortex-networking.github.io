@@ -1489,6 +1489,8 @@ export class Game extends ArcadeBase {
       const what = top.miss ? `missed ${top.miss} of ${top.tries} time${top.tries === 1 ? '' : 's'}` : `slow ${top.slow} of ${top.tries} time${top.tries === 1 ? '' : 's'}`;
       work = `Work on ${top.chord.long} (${top.chord.letters || top.chord.name}): ${what}.`;
     } else if (!done.length) work = '';
+    // inside a lesson or the Learn-it-with-games path, the path decides what comes next
+    else if (this.embedded) work = 'Every chord was solid.';
     else work = plan.hands === 'R' && this.songHasHand('L') ? 'Every chord was solid. Try the left hand next.' : 'Every chord was solid. Now play the song for real.';
     const rep = plan.repeats.filter((r) => r.from <= upTo + 1);
     return {
