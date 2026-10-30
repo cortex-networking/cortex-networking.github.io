@@ -39,6 +39,16 @@ export function spell(midi, key = 'C', prefer) {
   for (const [l, a] of Object.entries(sig)) {
     if (pc(LETTER_PC[l] + a) === p) { letter = +l; alter = a; }
   }
+  // minor keys: the raised 7th (leading tone) keeps the 7th's letter, so D minor has C♯, not D♭
+  if (letter === undefined && !prefer && /^[A-G][b#]?m$/.test(key)) {
+    const tl = LETTERS.indexOf(key[0]);
+    const tonic = LETTER_PC[tl] + (key[1] === 'b' ? -1 : key[1] === '#' ? 1 : 0);
+    if (p === pc(tonic - 1)) {
+      const l7 = (tl + 6) % 7;
+      const a = ((p - LETTER_PC[l7] + 18) % 12) - 6;
+      if (Math.abs(a) <= 1) { letter = l7; alter = a; }
+    }
+  }
   if (letter === undefined) {
     const nat = LETTER_PC.indexOf(p);
     if (nat >= 0) { letter = nat; alter = 0; }
@@ -96,6 +106,7 @@ export function parseVoice(str, hand = 'R', startBeat = 0) {
   const marks = [];
   let t = startBeat;
   let dur = 1;
+  let base = 1; // the last undotted note value, so a bare '.' dots it once
   let dyn = null;
   let tieFrom = new Map(); // midi -> event that is tied forward
   for (const tok of str.trim().split(/\s+/)) {
@@ -105,8 +116,8 @@ export function parseVoice(str, hand = 'R', startBeat = 0) {
     if (dm) { dyn = dm[1]; marks.push({ t, hand, dyn }); continue; }
     const m = TOKEN.exec(tok);
     if (!m) throw new Error(`Bad token "${tok}"`);
-    if (m[2]) dur = DUR[m[2]] * (m[3] ? 1.5 : 1);
-    else if (m[3]) dur = dur * 1.5;
+    if (m[2]) { base = DUR[m[2]]; dur = base * (m[3] ? 1.5 : 1); }
+    else if (m[3]) dur = base * 1.5;
     const nextTies = new Map();
     if (m[1] === 'r') {
       events.push({ t, d: dur, rest: true, hand });

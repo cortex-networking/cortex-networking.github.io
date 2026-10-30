@@ -44,7 +44,19 @@ export class Session {
   }
   get countInBeats() {
     const bpb = this.score.bpb || 4;
-    return bpb * Math.max(1, Math.ceil((3 * this.clickUnit) / bpb - 1e-6));
+    const full = bpb * Math.max(1, Math.ceil((3 * this.clickUnit) / bpb - 1e-6));
+    // with a pickup, count a full bar and then into the pickup ("1 2 3 4 1 2 3" before a one-beat
+    // pickup in 4/4), so the count-in ends where the music starts and every click stays on the
+    // beats of the song's bars
+    const p = (((this.score.pickup || 0) % bpb) + bpb) % bpb;
+    return p > 1e-6 && bpb - p > 1e-6 ? full + bpb - p : full;
+  }
+
+  /** True when beat b is the first beat of a bar (bars start at the pickup). */
+  _downbeat(b) {
+    const bpb = this.score.bpb || 4;
+    const m = (((b - (this.score.pickup || 0)) % bpb) + bpb) % bpb;
+    return m < 1e-6 || bpb - m < 1e-6;
   }
 
   mount() {
@@ -95,6 +107,7 @@ export class Session {
 
   stop(silent = false) {
     this.running = false;
+    clearTimeout(this._finishTimer); // a finish scheduled by the run being stopped must not end the next one
     this.app.sound.stopAll();
     this.app.keyboard.clear('cue-r', 'cue-l', 'demo');
     this.app.keyboard.clearFingers();
@@ -171,7 +184,7 @@ export class Session {
     this.misses = 0;
     this.app.keyboard.clear('cue-r', 'cue-l');
     this.app.keyboard.clearFingers();
-    if (!next) { this._update(); setTimeout(() => this._finish(), 500); return; }
+    if (!next) { this._update(); this._finishLater(500); return; }
     this.targetBeat = next.t;
     this._cueStep();
     this._update({ grade: 'step' });
@@ -210,7 +223,9 @@ export class Session {
     const kb = this.app.keyboard;
     if (!best) {
       const beat = (tIn - lat - this.t0) / this.spb;
-      const resting = this.score.events.some((e) => e.rest && (this.o.hands === 'B' || e.hand === this.o.hands) && beat >= e.t - 0.05 && beat < e.t + e.d - 0.1);
+      // a rest mistake only when every hand being practised is resting (not while the other one holds a note)
+      const restIn = (h) => this.score.events.some((e) => e.rest && e.hand === h && beat >= e.t - 0.05 && beat < e.t + e.d - 0.1);
+      const resting = (this.o.hands === 'B' ? ['R', 'L'] : [this.o.hands]).every(restIn);
       const due = this.practice.find((n) => !this.judged.has(n.i) && Math.abs(n.t - beat) < 0.5);
       this.stats.wrong++;
       kb.flash(midi, 'miss', 450);
@@ -275,8 +290,10 @@ export class Session {
     const beat = (now - lat - this.t0) / spb;
     staff.setBeat(beat);
     if (this.o.mode !== 'listen') {
-      const lead = this.countInBeats;
-      const n = beat < 0 ? Math.floor((beat + lead) / this.clickUnit) + 1 : 0;
+      const lead = this.countInBeats, bpb = this.score.bpb || 4;
+      // the count restarts at 1 on every downbeat of the count-in
+      const inBar = (((beat - (this.score.pickup || 0)) % bpb) + bpb) % bpb;
+      const n = beat < 0 && beat >= -lead - 1e-6 ? Math.floor(inBar / this.clickUnit + 1e-6) + 1 : 0;
       if (n !== this._count) {
         this._count = n;
         if (n > 0) this.app.ui.big(String(n), 'Count in', 'huge');
@@ -286,11 +303,8 @@ export class Session {
     const horizon = now + 0.3;
     while (this.t0 + this.clickBeat * spb < horizon) {
       const b = this.clickBeat;
-      const bpb = this.score.bpb || 4;
       if (b < 0 || (this.o.metronome && this.o.mode !== 'listen')) {
-        const rel = b < 0 ? b + this.countInBeats : b - (this.score.pickup || 0);
-        const down = Math.abs(((rel % bpb) + bpb) % bpb) < 1e-6;
-        if (b < this.score.length - 1e-6) sound.click(this.t0 + b * spb, down);
+        if (b < this.score.length - 1e-6) sound.click(this.t0 + b * spb, this._downbeat(b));
       }
       this.clickBeat += this.clickUnit;
       if (this.clickBeat > this.score.length + 4) break;
@@ -309,9 +323,12 @@ export class Session {
     // missed notes
     const tap = this.o.mode === 'tap';
     const due = tap ? this.steps.map((s) => ({ i: `s${s.t}`, t: s.t, notes: s.notes })) : this.practice;
+    // a key press reaches us `latency` ms after it happens (see _inputTime), so wait that long
+    // before calling a note missed, or a late-but-in-window note is failed before it arrives
+    const inLat = (this.app.settings.latency || 0) / 1000;
     while (this.missPtr < due.length) {
       const n = due[this.missPtr];
-      if (this.t0 + n.t * spb + lat + WINDOW > now) break;
+      if (this.t0 + n.t * spb + lat + WINDOW + inLat > now) break;
       if (!this.judged.has(n.i)) {
         this.judged.add(n.i);
         this.stats.missed++;
@@ -345,7 +362,7 @@ export class Session {
     this._demoKeys(now);
     if (!this.ended && beat > this.score.length + 0.3 && this.missPtr >= due.length) {
       this.ended = true;
-      setTimeout(() => this._finish(), 300);
+      this._finishLater(300);
     }
   }
 
@@ -389,6 +406,11 @@ export class Session {
       this.tracker = null;
     }
     return out;
+  }
+
+  _finishLater(ms) {
+    clearTimeout(this._finishTimer);
+    this._finishTimer = setTimeout(() => this._finish(), ms);
   }
 
   _finish() {

@@ -1,5 +1,6 @@
 // Song practice: wait, play along (with the band), rhythm only, listen. Feedback goes to the coach.
 import { buildScore } from './theory.js';
+import { parseChord } from './backing.js';
 import { Session } from './session.js';
 import { h, segmented, stars, toggle } from './ui.js';
 import { gradeText } from './lesson.js';
@@ -12,7 +13,10 @@ import { gradeText } from './lesson.js';
 export function songPath(app, song) {
   const score = buildScore(song);
   const hasL = !!score.hands.L && !!score.hands.R;
-  const distinct = new Set(String(song.chords || '').split(/[|\s]+/).map((t) => t.split(':')[0]).filter((t) => t && !/^n\.?c\.?$/i.test(t)));
+  // distinct chords as Ripchord voices them (root + triad: C, C7 and C/E are all "C"), so the
+  // Ripchord step is only offered when the game can play this song's chart and won't switch songs
+  const distinct = new Set(String(song.chords || '').split(/[|\s]+/).map((t) => parseChord(t.split(':')[0])).filter(Boolean)
+    .map((c) => `${c.root}:${(c.ivs.length <= 2 ? c.ivs : c.ivs.slice(0, 3)).join(',')}`));
   const id = song.id;
   const plan = [
     { type: 'game', game: 'roboman', params: { song: id, hands: 'R' }, pass: 0.6, text: `The rhythm of the right hand. Roboman rolls through ${song.title}: tap the short notes, hold the long ones.` },
