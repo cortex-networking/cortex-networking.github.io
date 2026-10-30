@@ -34,8 +34,12 @@ export function classifyPitch(expected, played, key = 'C') {
 /** Copy bars [fromBar, toBar] of a score (bar 0 = first bar or pickup) into a new score. */
 export function excerpt(score, fromBar, toBar, hands = 'B') {
   const starts = [0, ...score.barlines, score.length];
-  const a = starts[Math.max(0, fromBar)] ?? 0;
-  const b = starts[Math.min(starts.length - 1, toBar + 1)] ?? score.length;
+  // bars past the end (a stored context from an older version of a song) mean the last bar,
+  // never "from bar 0 to the end"
+  const last = Math.max(0, starts.length - 2);
+  const from = Math.min(Math.max(0, fromBar), last);
+  const to = Math.min(Math.max(from, toBar), last);
+  const a = starts[from], b = starts[to + 1];
   const keep = score.events.filter((e) => e.t >= a - 1e-6 && e.t < b - 1e-6 && (hands === 'B' || e.hand === hands));
   const map = new Map();
   const events = keep.map((e, i) => { const c = { ...e, t: e.t - a, i }; map.set(e, c); return c; });
@@ -43,6 +47,13 @@ export function excerpt(score, fromBar, toBar, hands = 'B') {
     if (c.tieTo) c.tieTo = map.get(c.tieTo) || undefined;
     if (c.tiedFrom) c.tiedFrom = map.get(c.tiedFrom) || undefined;
     if (c.tieTo === undefined) delete c.tieTo;
+  }
+  // sounding length only counts the tied notes that are inside the excerpt
+  for (const c of events) {
+    if (c.rest || c.tiedFrom) continue;
+    let sd = c.d;
+    for (let n = c.tieTo; n; n = n.tieTo) sd += n.d;
+    c.sd = sd;
   }
   return {
     ...score, events, notes: events.filter((e) => !e.rest && !e.tiedFrom),
@@ -212,7 +223,8 @@ export class Coach {
     const tempo = ctx.score?.tempo || 80;
     const staves = ctx.staves || (hands === 'L' ? 'bass' : hands === 'R' ? 'treble' : 'grand');
     const bars = ctx.bars && ctx.bars.length ? ctx.bars : [0];
-    const lo = Math.max(0, Math.min(...bars)), hi = Math.min(lo + 1, Math.max(...bars));
+    const lastBar = ctx.score ? ctx.score.barlines.length : Infinity;
+    const lo = Math.min(lastBar, Math.max(0, Math.min(...bars))), hi = Math.min(lo + 1, lastBar, Math.max(lo, ...bars));
     const passage = ctx.score ? excerpt(ctx.score, lo, hi, hands) : null;
     const usable = passage && passage.notes.length >= 2;
     const conf = (ctx.confusions || []).filter(([e]) => e !== undefined);
@@ -313,7 +325,10 @@ export class Coach {
         break;
       }
       case 'quiz': {
-        steps.push({ type: 'quiz', generator: ctx.topic || 'treble-notes', count: 6, text: 'A quick review.' });
+        // "quiz" is QuizRunner's topic for a lesson's own written questions: there is no generator
+        // for those, and a stand-in staff-reading quiz would test things the lesson hasn't taught,
+        // so the learner just gets "Try again"
+        if (ctx.topic && ctx.topic !== 'quiz') steps.push({ type: 'quiz', generator: ctx.topic, count: 6, text: 'A quick review.' });
         break;
       }
       default: break;
