@@ -1,4 +1,4 @@
-// Original starter songs and the three base games. Newer song collections live in songs-*.js
+// Original starter songs. Newer song collections live in songs-*.js
 // and replace entries here with the same id. Voice syntax: see parseVoice() in theory.js.
 
 export const SONGS = [
@@ -61,37 +61,5 @@ export const SONGS = [
     id: 'fur-elise', title: 'Für Elise (opening)', composer: 'Ludwig van Beethoven', level: 4, key: 'Am', time: [3, 8], tempo: 72, pickup: 0.5,
     rh: 'E5s:5 D#5:4 | E5:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 G#4:3 B4:4 | C5e:5 rs E4s:1 E5:5 D#5:4 | E5:5 D#5:4 E5:5 B4:2 D5:4 C5:3 | A4e:1 rs C4s:1 E4:2 A4:3 | B4e:4 rs E4s:1 C5:4 B4:3 | A4q.:2',
     lh: 're | rq. | A2s:5 E3:2 A3:1 re. | E2s:5 E3:1 G#3:2 re. | A2s:5 E3:2 A3:1 re. | rq. | A2s:5 E3:2 A3:1 re. | E2s:5 E3:1 G#3:2 re. | A2s:5 E3:2 A3:1 re.',
-  },
-];
-
-export const GAMES = [
-  {
-    id: 'rush', title: 'Note Rush',
-    summary: 'Notes slide toward the line. Play each one before it gets there.',
-    levels: [
-      { name: 'Middle C to G', pool: [60, 62, 64, 65, 67], staves: 'treble' },
-      { name: 'Treble staff', pool: [60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79], staves: 'treble' },
-      { name: 'Bass staff', pool: [43, 45, 47, 48, 50, 52, 53, 55, 57, 59, 60], staves: 'bass' },
-      { name: 'Both staves', pool: [43, 45, 47, 48, 50, 52, 53, 55, 57, 59, 60, 62, 64, 65, 67, 69, 71, 72, 74, 76, 77, 79], staves: 'grand' },
-      { name: 'Sharps and flats', pool: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72], staves: 'treble', accidentals: true },
-    ],
-  },
-  {
-    id: 'echo', title: 'Echo',
-    summary: 'Listen to a phrase and play it back. Each round adds a note.',
-    levels: [
-      { name: 'Five notes', pool: [60, 62, 64, 65, 67], showKeys: true },
-      { name: 'One octave', pool: [60, 62, 64, 65, 67, 69, 71, 72], showKeys: true },
-      { name: 'By ear only', pool: [60, 62, 64, 65, 67, 69, 71, 72], showKeys: false },
-      { name: 'With black keys', pool: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72], showKeys: false },
-    ],
-  },
-  {
-    id: 'hunt', title: 'Key Hunt',
-    summary: 'A note name appears. Find it anywhere, as many as you can in a minute.',
-    levels: [
-      { name: 'White keys', pcs: [0, 2, 4, 5, 7, 9, 11] },
-      { name: 'All twelve', pcs: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] },
-    ],
   },
 ];

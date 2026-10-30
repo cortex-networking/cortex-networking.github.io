@@ -59,6 +59,13 @@ export function barOf(score, t) {
   return n;
 }
 
+/** A short Ducks round (shooting gallery) on a set of notes, for reading practice. */
+function ducksStep(pool, text, extra = {}) {
+  const lo = Math.min(...pool), hi = Math.max(...pool);
+  const staves = lo >= 57 ? 'treble' : hi <= 64 ? 'bass' : 'grand';
+  return { type: 'game', game: 'ducks', params: { pool, staves, count: 8, throws: 3, speed: 0.8, ...extra }, pass: 0.75, text };
+}
+
 export class Coach {
   constructor(app) {
     this.app = app;
@@ -204,6 +211,7 @@ export class Coach {
           if (cat === 'octave') steps.push({ type: 'say', text: 'The same letter repeats every eight white keys. Find the exact one: its height on the staff tells you which octave, and ledger lines count as extra staff lines.' });
           steps.push({ type: 'find', notes: expected.length ? expected : pool.slice(0, 3), show: 'both', key, text: 'Watch where each one sits, then play it.' });
           steps.push({ type: 'find', pool, count: 8, show: 'staff', key, text: 'Now from the staff alone.' });
+          steps.push(ducksStep(pool, 'Shooting gallery: the ducks are swimming on these same notes.'));
         }
         break;
       }
@@ -215,6 +223,7 @@ export class Coach {
         if (passage) passage.notes.filter((n) => isBlack(n.midi)).forEach((n) => pool.add(n.midi));
         if (pool.size < 2) [61, 63, 66, 68, 70].forEach((m) => pool.add(m));
         steps.push({ type: 'find', pool: [...pool], count: 8, show: 'staff', key, text: 'Read each note, sharps and flats included.' });
+        steps.push(ducksStep([...pool], 'Shooting gallery with sharps and flats.', { accidentals: true }));
         break;
       }
       case 'neighbor': case 'missed': case 'chord': {

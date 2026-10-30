@@ -4,7 +4,7 @@ import { Session } from './session.js';
 import { h, stars } from './ui.js';
 import { catalog } from './catalog.js';
 
-const PASS = { say: 1, find: 0.7, pcs: 0.5, quiz: 0.7, seq: 0.85, rhythm: 0.7, tap: 0.75, song: 0.8 };
+const PASS = { say: 1, find: 0.7, pcs: 0.5, quiz: 0.7, seq: 0.85, rhythm: 0.7, tap: 0.75, song: 0.8, game: 0.7 };
 const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
 function stavesFor(step, lesson = {}) {
@@ -231,6 +231,7 @@ export class StepRunner {
       return;
     }
     if (step.type === 'quiz') { this._quiz(i, step, staves, skip); return; }
+    if (step.type === 'game') { this._game(i, step); return; }
     if (step.type === 'seq') {
       const score = scoreFor(step);
       const hands = score.hands.R && score.hands.L ? 'B' : score.hands.L ? 'L' : 'R';
@@ -317,6 +318,38 @@ export class StepRunner {
     ui.foot(skip);
   }
 
+  /** An arcade game round inside a lesson or practice routine (step.game, step.params). */
+  async _game(i, step) {
+    const { ui } = this.app;
+    let mod = null;
+    try { mod = await import(`./game-${step.game}.js`); } catch { mod = null; }
+    if (this.i !== i) return;
+    if (!mod?.Game) { this.done(i, { score: 1 }); return; }
+    const back = { kicker: ui.kicker.textContent, title: ui.title.textContent };
+    const restore = () => { ui.head(back); this.o.onProgress?.(i, this.steps.length); };
+    let game = null;
+    game = new mod.Game(this.app, mod.GAME, {
+      embedded: {
+        ...(step.params || {}), text: step.text, pass: step.pass ?? PASS.game,
+        onDone: (r) => {
+          setTimeout(() => {
+            if (this.i !== i || this.task?.game !== game) return;
+            game.exit(); this.task = null; restore();
+            this.done(i, { score: r.accuracy ?? (r.passed ? 1 : 0), detail: r.detail });
+          }, 900);
+        },
+      },
+    });
+    this.task = {
+      game,
+      noteOn: (midi, time, vel, source) => game.noteOn({ midi, time, vel, source }),
+      noteOff: (midi, time) => game.noteOff({ midi, time }),
+      tick: (dt) => game.tick(dt),
+      stop: () => { game.exit(); restore(); },
+    };
+    game.enter();
+  }
+
   skip() {
     this.results[this.i] = { score: 0, skipped: true, passed: false };
     this.next();
@@ -339,6 +372,14 @@ export class StepRunner {
         ui.foot(
           h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.next() }, 'Continue'),
           h('button', { class: 'btn', onclick: () => this.run(i) }, 'Try again'),
+        );
+        return;
+      }
+      if (step.type === 'game') {
+        ui.prompt(`${r.detail ? `${r.detail} ` : ''}${r.score >= 0.9 ? 'Excellent.' : 'Nicely done.'}`);
+        ui.foot(
+          h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.next() }, 'Continue'),
+          h('button', { class: 'btn', onclick: () => this.run(i) }, 'Play again'),
         );
         return;
       }

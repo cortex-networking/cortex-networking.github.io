@@ -274,6 +274,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this review you’ll be able to read any note from middle C up to the D on the fourth line, and play a melody you’ve never seen before.' },
       { type: 'find', pool: [...TREBLE_WHITE, 74], count: 8, show: 'staff', text: 'Read and play. Move your hand between C position and G position as you need.' },
+      { type: 'game', game: 'ducks', params: { pool: [...TREBLE_WHITE, 74], staves: 'treble', count: 10, throws: 3, speed: 0.85 }, text: 'Shooting gallery: each duck is swimming on one of these notes. Play the note the leftmost duck is on to hit it.' },
       { type: 'seq', rh: 'E4q:3 E4 E4h | E4q E4 E4h | E4q G4:5 C4:1 D4:2 | E4w:3 | F4q:4 F4 F4 F4 | F4 E4 E4 E4 | E4 D4 D4 E4 | D4h G4h', text: 'The winter tune from the last lesson, now in C position. The first finger numbers show where your hand goes; after that, read on your own.' },
       { type: 'seq', rh: 'C4q E4 G4 E4 | F4 D4 E4h | G4q F4 E4 D4 | E4 D4 C4h', text: 'A brand-new melody with no finger numbers. Watch the steps and skips.' },
       {
@@ -467,6 +468,7 @@ export const LESSONS = [
     staves: 'grand',
     steps: [
       { type: 'say', text: 'By the end of this review you’ll be able to read notes on both staves, pick the right hand for each, and play a whole melody with your left hand.' },
+      { type: 'game', game: 'ducks', params: { pool: [...BASS_WHITE, 62, 64, 65, 67], staves: 'grand', count: 10, throws: 3, speed: 0.85 }, text: 'Shooting gallery on both staves. Check the clef before you play each duck.' },
       {
         type: 'quiz', text: 'Warm-up: treble and bass notes mixed. Look at the clef first.',
         items: [
@@ -792,6 +794,7 @@ export const LESSONS = [
     steps: [
       { type: 'say', text: 'By the end of this review you’ll be able to read sharps, flats and key signatures without hesitating, and play a minor-key melody in time with both hands.' },
       { type: 'find', pool: [61, 63, 66, 68, 70], count: 6, show: 'staff', prefer: 'flat', text: 'Black keys written as flats this time. Read and play.' },
+      { type: 'game', game: 'ducks', params: { pool: [60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70], staves: 'treble', accidentals: true, count: 10, throws: 3, speed: 0.85 }, text: 'Shooting gallery with sharps and flats. A sharp is the very next key up, a flat the very next key down.' },
       { type: 'find', pool: [64, 65, 67, 69, 70, 72], count: 8, show: 'staff', key: 'Dm', text: 'Read these in D minor. The key signature makes every B a B♭.' },
       { type: 'seq', key: 'Em', rh: 'B4q:5 A4:4 G4:3 F#4:2 | E4h:1 F#4h:2 | G4q:3 A4:4 B4:5 A4:4 | G4h:3 F#4h:2 | B4q:5 A4:4 G4:3 F#4:2 | E4h:1 G4h:3 | F#4q:2 E4:1 F#4:2 G4:3 | E4w:1', lh: 'E3w:1 | B2w:4 | C3w:3 | B2w:4 | E3w:1 | C3w:3 | B2w:4 | E3w:1', text: 'A lament in E minor, at your own pace. The left hand moves between E, C and B.' },
       { type: 'rhythm', key: 'Em', rh: 'B4q:5 A4:4 G4:3 F#4:2 | E4h:1 F#4h:2 | G4q:3 A4:4 B4:5 A4:4 | G4h:3 F#4h:2 | B4q:5 A4:4 G4:3 F#4:2 | E4h:1 G4h:3 | F#4q:2 E4:1 F#4:2 G4:3 | E4w:1', lh: 'E3w:1 | B2w:4 | C3w:3 | B2w:4 | E3w:1 | C3w:3 | B2w:4 | E3w:1', tempo: 72, hands: 'B', check: true, text: 'Check: the lament in time, hands together.' },
