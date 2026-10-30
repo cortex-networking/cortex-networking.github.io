@@ -3,6 +3,7 @@ import { SONGS as OLD_SONGS, GAMES as BASE_GAMES } from './library.js';
 import { CHAPTERS, LESSONS } from './curriculum.js';
 import { SONGS_ROCK } from './songs-rock.js';
 import { SONGS_FOLK } from './songs-folk.js';
+import { SONGS_CLASSICAL } from './songs-classical.js';
 
 /** Later collections replace earlier entries with the same id (they carry chords, tags and blurbs). */
 function mergeSongs(...lists) {
@@ -11,7 +12,7 @@ function mergeSongs(...lists) {
   return [...byId.values()];
 }
 
-let songs = mergeSongs(OLD_SONGS.map((s) => ({ tags: ['starter'], style: 'folk', ...s })), SONGS_FOLK, SONGS_ROCK);
+let songs = mergeSongs(OLD_SONGS.map((s) => ({ tags: ['starter'], style: 'folk', ...s })), SONGS_FOLK, SONGS_CLASSICAL, SONGS_ROCK);
 let chapters = CHAPTERS;
 let lessons = [];
 let games = [...BASE_GAMES];

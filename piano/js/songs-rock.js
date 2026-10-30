@@ -94,7 +94,7 @@ export const SONGS_ROCK = [
   },
   {
     id: 'colonel-bogey', title: 'Colonel Bogey March', composer: 'Kenneth J. Alford', year: 1914,
-    level: 3, key: 'D', time: [2, 2], tempo: 144, tags: ['march'], style: 'march',
+    level: 3, key: 'D', time: [2, 2], tempo: 144, tags: ['march', 'games'], style: 'march',
     blurb: 'The famous whistling march: count the rests carefully, because the silences are where the swagger lives.',
     chords: 'D | D | D | D | D | D | A7 | A7 | A7 | A7 | D | D E7 | A | E7 | A | A7 | D | D | D | D | D | D | A7 | A7 | A7 | A7 | D | D | Em7 | A7 | D | D',
     rh: '!p A4q:5 F#4e:3 re rh | rq F#4q:3 G4:4 A4:5 | F#5q:5 rq F#5q rq | D5w:3 | A4q:5 F#4e:3 re rh | rq F#4q:3 G4:4 F#4:3 | A4q:5 rq A4q rq | G4w:4 | '
@@ -118,7 +118,7 @@ export const SONGS_ROCK = [
   },
   {
     id: 'the-entertainer', title: 'The Entertainer (opening)', composer: 'Scott Joplin', year: 1902,
-    level: 4, key: 'C', time: [2, 4], tempo: 72, pickup: 0.5, tags: ['blues', 'classical'], style: 'rag',
+    level: 4, key: 'C', time: [2, 4], tempo: 72, pickup: 0.5, tags: ['blues', 'classical', 'games'], style: 'rag',
     blurb: 'Joplin’s ragtime hit, simplified to single notes: tied off-beat syncopations in the right hand over a stride left hand that jumps from bass note to chord.',
     chords: 'C C7 | F C/E | C/G G7 | C G7 | C C7 | F C/E | D7 | G7 | C C7 | F C/E | C/G G7 | C | C C7 | F/A Fm/Ab | C/G G7 | C',
     rh: '!mf D4s:1 D#4:2 | E4s:1 C5e:5 E4s:1 C5e:5 E4s:1 C5s:5~ | C5q~ C5s C5s:1 D5:2 D#5:3 | E5s:4 C5:2 D5:3 E5s:4~ E5 B4:1 D5e:3 | C5q.:2 D4s:1 D#4:2 | '
