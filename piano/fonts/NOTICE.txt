@@ -1,0 +1,4 @@
+notation-subset.woff2 is a glyph subset of the Bravura music font
+(Copyright © 2019 Steinberg Media Technologies GmbH), renamed "MC Notation"
+as required by the SIL Open Font License for modified versions.
+The full license text is in Bravura-OFL.txt.

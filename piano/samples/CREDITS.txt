@@ -1,0 +1,31 @@
+Middle C - audio sample credits
+================================
+
+Piano samples (samples/piano/*.mp3)
+-----------------------------------
+Work:     Salamander Grand Piano V3
+Author:   Alexander Holm
+License:  Creative Commons Attribution 3.0 Unported (CC BY 3.0)
+          https://creativecommons.org/licenses/by/3.0/
+          Full license text: LICENSE-CC-BY-3.0.txt (in this folder)
+Original: https://archive.org/details/SalamanderGrandPianoV3
+Obtained from the SFZ edition at
+          https://github.com/sfzinstruments/SalamanderGrandPiano
+          (commit 3382bf9496bba2486f5ab0de55a264d1dfc38404, files Samples/*v6.flac and Samples/*v12.flac)
+
+Changes made for Middle C (this is an adaptation of the Work):
+  - Selected 30 notes in minor thirds from A0 to C8 and two of the sixteen
+    velocity layers (v6 used as "soft", v12 used as "loud").
+  - Aligned the two microphone channels and mixed them to mono.
+  - Trimmed silence before the hammer strike, shortened each note to about
+    2 to 5 seconds with a fade-out, and evened out the level across the keyboard.
+  - Re-encoded as 96 kbps MP3.
+  These changes are by the Middle C project. Alexander Holm does not endorse
+  Middle C or these changes.
+
+Credit line shown in the app:
+  Piano samples: Salamander Grand Piano by Alexander Holm (CC-BY 3.0)
+
+All other sounds (electric piano, organ, bass, strings pad, choir, pluck,
+drum kit, metronome and the fallback piano) are synthesized in the browser
+by js/audio.js and use no recorded samples.
