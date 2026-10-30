@@ -11,6 +11,7 @@ import { LessonMode, PracticeMode, lessonUnlocked, resolveRef } from './lesson.j
 import { SongMode } from './songmode.js';
 import { HomeMode, ProgressMode, nextLesson, showCertificate } from './home.js';
 import { FreeMode } from './modes.js';
+import { JukeboxMode } from './jukebox.js';
 
 const $ = (s) => document.querySelector(s);
 const TABS = ['learn', 'songs', 'games', 'free'];
@@ -187,6 +188,9 @@ class App {
     } else if (t === 'progress') {
       this.current = 'progress';
       ctrl = new ProgressMode(this);
+    } else if (t === 'songs' && id === 'jukebox') {
+      this.current = 'jukebox';
+      ctrl = new JukeboxMode(this);
     } else if (t === 'songs') {
       const song = (id && catalog.song(id)) || this._defaultSong();
       this.current = song.id;
@@ -289,7 +293,8 @@ class App {
         if (!body.childNodes.length) body.append(h('p', { class: 'list-note' }, 'No songs match that.'));
       };
       search.addEventListener('input', () => { this.songQuery = search.value; draw(); });
-      list.append(search, body);
+      const juke = h('div', { class: 'list-top' }, item('songs', 'jukebox', 'Jukebox', 'Sit back: every song with the full band, one after another.'));
+      list.append(juke, search, body);
       draw();
     } else if (this.tab === 'games') {
       const arcadeIds = Object.keys(this.extras.arcade?.ARCADE_CLASSES || {});

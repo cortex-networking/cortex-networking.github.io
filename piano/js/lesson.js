@@ -552,31 +552,40 @@ export class PracticeMode {
       ui.foot(h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.app.open('learn', '') }, 'Back to the course'));
       return;
     }
-    ui.head({ kicker: 'Practice made from your mistakes', title: this.routine.title });
-    const spots = this.routine.spots || [];
-    ui.prompt(spots.length ? `Today: ${spots.map((s) => s.label.toLowerCase()).join(' and ')}. About ${Math.max(3, this.routine.steps.length)} minutes.` : 'A short, focused routine.');
-    ui.pips(this.routine.steps.length, -1);
-    ui.foot(h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.start() }, 'Start practice'));
+    const r = this.routine;
+    ui.head({ kicker: r.kicker || 'Practice made from your mistakes', title: r.title });
+    const spots = r.spots || [];
+    ui.prompt(r.intro || (spots.length ? `Today: ${spots.map((s) => s.label.toLowerCase()).join(' and ')}. About ${Math.max(3, r.steps.length)} minutes.` : 'A short, focused routine.'));
+    ui.pips(r.steps.length, -1);
+    const resume = r.startAt > 0 && r.startAt < r.steps.length;
+    ui.foot(
+      h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.start(resume ? r.startAt : 0) }, resume ? `Continue from step ${r.startAt + 1}` : (r.startLabel || 'Start practice')),
+      resume ? h('button', { class: 'btn', onclick: () => this.start(0) }, 'Start over') : null,
+    );
   }
 
-  start() {
+  start(from = 0) {
     const { ui } = this.app;
+    const r = this.routine;
     this.runner = new StepRunner(this.app, {
-      steps: this.routine.steps, lesson: { skills: [] },
-      onProgress: (i, n) => ui.pips(n, i),
+      steps: r.steps, lesson: { skills: [] },
+      onProgress: (i, n) => { ui.pips(n, i); r.onProgress?.(i, n); },
       onDone: (results) => {
-        const graded = results.filter((r) => r && r.type !== 'say' && !r.skipped);
-        const avg = graded.length ? graded.reduce((a, r) => a + r.score, 0) / graded.length : 1;
-        ui.head({ kicker: 'Practice done', title: this.routine.title });
-        ui.prompt(avg >= 0.85 ? 'Strong work. Those spots are getting solid.' : 'Good effort. Come back to this tomorrow; short, regular practice works best.');
+        const graded = results.filter((x) => x && x.type !== 'say' && !x.skipped);
+        const avg = graded.length ? graded.reduce((a, x) => a + x.score, 0) / graded.length : 1;
+        r.onDone?.(avg, results);
+        ui.head({ kicker: r.doneKicker || 'Practice done', title: r.title });
+        ui.prompt(r.doneText ? r.doneText(avg) : avg >= 0.85 ? 'Strong work. Those spots are getting solid.' : 'Good effort. Come back to this tomorrow; short, regular practice works best.');
         ui.big(`${Math.round(avg * 100)}%`, 'average');
         ui.foot(
-          h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.app.open('learn', '') }, 'Back to the course'),
-          h('button', { class: 'btn', onclick: () => this.start() }, 'Practice again'),
+          r.back
+            ? h('a', { class: 'btn primary', href: r.back.href }, r.back.label)
+            : h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.app.open('learn', '') }, 'Back to the course'),
+          h('button', { class: 'btn', onclick: () => this.start() }, r.againLabel || 'Practice again'),
         );
       },
     });
-    this.runner.start();
+    this.runner.start(from);
   }
 
   noteOn(e) { this.runner?.noteOn(e); }
