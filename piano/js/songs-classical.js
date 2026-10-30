@@ -49,7 +49,7 @@ export const SONGS_CLASSICAL = [
   // ---------- epic and dark ----------
   {
     id: 'hall-of-the-mountain-king', title: 'In the Hall of the Mountain King', composer: 'Edvard Grieg', year: 1875,
-    level: 2, key: 'Am', time: [4, 4], tempo: 112,
+    level: 3, key: 'Am', time: [4, 4], tempo: 112,
     tags: ['epic', 'classical', 'games'], style: 'epic',
     chords: 'Am | Am | Am | C | Am | Am | Am | C | E | Caug E | E | Caug E | Am | Am | Am | Am',
     blurb: 'Trolls creeping through a mountain hall, quiet at first and getting louder every time round (moved to A minor to keep the sharps down).',

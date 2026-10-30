@@ -160,7 +160,7 @@ export const SONGS_ROCK = [
   },
   {
     id: 'iron-riff', title: 'Iron Riff', composer: 'Original',
-    level: 2, key: 'Em', time: [4, 4], tempo: 100, tags: ['epic'], style: 'rock',
+    level: 3, key: 'Em', time: [4, 4], tempo: 100, tags: ['epic'], style: 'rock',
     blurb: 'A heavy E-minor riff built on power chords: the left hand clamps fingers 5 and 1 on a bare fifth and moves the whole shape as one block.',
     chords: 'E5:3 G5:1 | E5 | C5 D5 | E5 | E5:3 G5:1 | E5 | C5 D5 | B5 | E5:3 G5:1 | E5 | C5 D5 | E5 | G5 D5 | C5 B5 | C5 D5 | E5',
     rh: '!mf E4q:1 E4 G4:3 E4:1 | A4q:4 G4:3 E4h:1 | E4q:1 E4 F#4:2 A4:4 | B4h:5 rh | E4q:1 E4 G4:3 E4:1 | A4q:4 G4:3 E4h:1 | G4q:3 E4:1 F#4:2 A4:4 | F#4h:2 rh | '
