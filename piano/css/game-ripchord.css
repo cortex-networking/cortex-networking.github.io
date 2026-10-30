@@ -30,6 +30,7 @@
 .rc-banner.is-answer { fill: var(--brass); }
 /* banner text and visors use a fixed dark ink: --ink turns light in dark mode */
 .rc-banner-text { font-family: var(--sans); font-weight: 700; fill: #1a1d1b; letter-spacing: 0.01em; }
+.rc-banner-sub { font-family: var(--sans); font-weight: 600; fill: #1a1d1b; opacity: 0.75; }
 
 /* parachutists */
 .rc-suit { fill: var(--chalk); }
@@ -65,6 +66,18 @@
 .rc-title-k { font-family: var(--sans); font-weight: 600; fill: var(--brass); letter-spacing: 0.14em; }
 .rc-title-t { font-family: var(--sans); font-weight: 600; fill: var(--chalk); }
 .rc-float-time { fill: var(--mint); }
+
+/* song mode: the progression strip along the ground */
+.rc-cell { fill: rgba(232, 237, 227, 0.05); stroke: rgba(232, 237, 227, 0.22); stroke-width: 1; }
+.rc-cell.now { fill: var(--brass); stroke: var(--brass); }
+.rc-cell.ok { fill: rgba(98, 201, 147, 0.14); stroke: rgba(98, 201, 147, 0.5); }
+.rc-cell.miss { fill: rgba(233, 112, 90, 0.14); stroke: rgba(233, 112, 90, 0.55); }
+.rc-cell-t { font-family: var(--sans); font-weight: 600; fill: var(--chalk-2); }
+.rc-cell-t.now { fill: #1a1d1b; }
+.rc-cell-t.ok { fill: var(--mint); }
+.rc-cell-t.miss { fill: var(--coral); }
+.rc-cell-more { font-family: var(--sans); fill: var(--chalk-3); }
+.rc-cell-rpt { fill: var(--chalk-2); }
 
 /* countdown timer, upper right */
 .rc-timer-bg { fill: rgba(15, 31, 25, 0.7); stroke: rgba(232, 237, 227, 0.14); stroke-width: 1; }

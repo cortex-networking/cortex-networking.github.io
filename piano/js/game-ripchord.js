@@ -10,16 +10,19 @@
 //           included; a slash chord is voiced as that inversion. 'C5' is the power chord, so give
 //           single notes as numbers. Pitch strings like 'C4 E4 G4' work too. They come in the
 //           order given, repeating if count is longer (levels shuffle their own chords).
-//   song    a catalog song id: take the chords (as root-position triads) from its chord chart.
-//   count   helicopters in the round (default 10)
+//   song    a catalog song id: song mode, walking that song's chord chart in order (see below).
+//   hands   song mode: 'R' (default) close triads from middle C; 'L' left-hand chords on the bass
+//           staff, as the song's left hand plays them
+//   fromBar, toBar   song mode: only these bars (inclusive, 0-based as songBar counts them)
+//   passes  song mode: 1 or 2 times through (default: twice if the progression is short)
+//   count   helicopters in the round (default 10; song mode plays the song instead)
 //   time    seconds per chord at the start of the round; it shrinks to 70% by the last one
 //   staves  'treble' | 'bass' | 'grand' (default: from the notes in `chords`, else the level's)
 //   names   show the chord name on the banner before it is played (it always shows after)
 //   pass    share of chords to get right to pass (default 0.7); text: the prompt line
-import { ArcadeBase, svg, rand, pick, ease, clamp, GLYPH } from './arcade.js';
-import { spell, parsePitch, pc, LETTERS } from './theory.js';
-import { parseChord } from './backing.js';
-import { catalog } from './catalog.js';
+import { ArcadeBase, svg, rand, ease, clamp, GLYPH, songBar } from './arcade.js';
+import { spell, parsePitch, pc, LETTERS, buildScore, keySigMap } from './theory.js';
+import { parseChord, chartSegments } from './backing.js';
 import { h } from './ui.js';
 
 // ---------- chords: voicing, spelling and names ----------
@@ -134,6 +137,23 @@ export function chordFromSymbol(sym, staves = 'treble', inversions = true, triad
   return c;
 }
 
+/**
+ * Spell given notes as the chord a symbol names (a left-hand voicing taken from the song): the
+ * name stays the song's symbol; a bare root and fifth says so.
+ */
+function voiceSymbol(sym, notes) {
+  const s = String(sym).trim().replace(/♯/g, '#').replace(/♭/g, 'b');
+  const p = parseChord(s);
+  if (!p) return chordFromMidi(notes);
+  const same = (ivs) => (x) => x.ivs.length === ivs.length && x.ivs.every((v, i) => v === ivs[i]);
+  const q = QUALITIES.find(same(p.ivs)) || QUALITIES.find(same(p.ivs.length <= 2 ? p.ivs : p.ivs.slice(0, 3)));
+  if (!q) return chordFromMidi(notes);
+  const c = build(rootOf(s), q, notes);
+  const ivs = [...new Set(notes.map((m) => pc(m - p.root)))].sort((a, b) => a - b);
+  if (q.ivs.length > 2 && ivs.length === 2 && ivs[0] === 0 && [6, 7, 8].includes(ivs[1])) c.long = `${c.title}, root and fifth`;
+  return c;
+}
+
 function toChord(entry, staves) {
   try {
     if (typeof entry === 'number') return chordFromMidi([entry]);
@@ -157,12 +177,27 @@ function progression(song) {
   return out;
 }
 
-const SONG_FALLBACK = ['korobeiniki', 'greensleeves', 'drunken-sailor'];
+/** Can this song's chart be played? At least two different chords we can voice. Cached. */
+const USABLE = new Map();
+function usableChart(song) {
+  if (!song?.chords) return false;
+  if (!USABLE.has(song.id)) USABLE.set(song.id, new Set(progression(song).map((c) => c.name)).size >= 2);
+  return USABLE.get(song.id);
+}
+
+/** '½ bar', '1½ bars', '3 beats' */
+function barsLong(bars, bpb) {
+  const n = Math.floor(bars + 1e-6), f = bars - n;
+  const frac = [[0, ''], [0.25, '¼'], [1 / 3, '⅓'], [0.5, '½'], [2 / 3, '⅔'], [0.75, '¾']].find(([v]) => Math.abs(f - v) < 0.02);
+  if (!frac) { const b = Math.round(bars * bpb * 2) / 2; return `${b} beat${b === 1 ? '' : 's'}`; }
+  return `${n || ''}${frac[1]} bar${bars > 1.01 ? 's' : ''}`;
+}
 
 export const GAME = {
   id: 'ripchord', title: 'Ripchord',
   summary: 'The chord drop. Hold down the whole chord the helicopter tows in before time runs out.',
   how: 'A helicopter tows in a chord. Hold all its notes down together before the timer runs out and the parachutists float down to the pad. Notes you hold turn green. A wrong note, or too slow, and they go splat.',
+  songHow: 'Play the song’s chords in order, bar by bar. Each helicopter brings the next chord and says which bars it lasts; the strip along the ground shows the progression.',
   skill: 'chords',
   levels: [
     { name: 'Single notes', staves: 'treble', names: true, time: 6, count: 10, chords: [60, 62, 64, 65, 67] },
@@ -173,7 +208,7 @@ export const GAME = {
     { name: 'All the white-key triads', staves: 'treble', names: false, time: 7, count: 10, chords: ['C', 'Dm', 'Em', 'F', 'G', 'Am', 'Bdim'] },
     { name: 'Inversions of C, F and G', staves: 'treble', names: false, time: 8, count: 10, chords: ['C/E', 'C/G', 'F/A', 'F/C', 'G/B', 'G/D', 'C', 'F', 'G'] },
     { name: 'Left-hand chords', staves: 'bass', names: true, time: 8, count: 10, chords: ['C', 'F', 'G', 'Am', 'Dm', 'Em', 'F/C', 'G/B'] },
-    { name: 'Chords from a song', staves: 'treble', names: false, time: 8, count: 10, song: 'auto' },
+    { name: 'Chords from a song', song: true, staves: 'treble', names: true, time: 8 },
   ],
 };
 
@@ -212,14 +247,15 @@ const CLOUD = 'M-2,0.5 C-2.5,0.5 -2.6,-0.3 -1.75,-0.35 C-1.65,-1.1 -0.55,-1.2 -0
 
 export class Game extends ArcadeBase {
   stageOptions() {
-    return { staves: this._staves(), key: 'C', mTop: 6.6, mBot: 3, padTop: 0.03, padBot: 0.16, maxSp: 24 };
+    const key = this.songMode ? this.songDef?.key || 'C' : 'C';   // a song keeps its key signature
+    return { staves: this._staves(), key, mTop: 6.6, mBot: 3, padTop: 0.03, padBot: 0.16, maxSp: 24 };
   }
 
   /** Embedded chords pick their own staff unless one is given. */
   _staves() {
     const e = this.embedded;
     if (e?.staves) return e.staves;
-    if (e?.song && !e.chords) return 'treble';
+    if (this.songMode) return this._songPlan()?.staves || 'treble';
     if (e?.chords) {
       const nums = e.chords.flatMap((c) => (typeof c === 'number' ? [c] : Array.isArray(c) ? c : []));
       if (!nums.length) return 'treble';
@@ -323,32 +359,154 @@ export class Game extends ArcadeBase {
   }
 
   // ---------- the chords for a round ----------
-  _pickSong(id) {
-    const tryId = (sid) => {
-      const s = catalog.song(sid);
-      if (!s || !s.chords) return null;
-      const prog = progression(s);
-      const distinct = new Set(prog.map((c) => c.name)).size;
-      return distinct >= 2 ? { song: s, prog, distinct } : null;
+  /** Song mode: only songs whose chord chart we can play. */
+  songFilter(song) { return usableChart(song); }
+
+  get songMode() { return this.songLevel && !this.embedded?.chords?.length; }
+
+  /**
+   * The song-mode plan: the song's chord chart walked bar by bar, in order. A chord that carries
+   * on merges into one helicopter that says which bars it lasts; a run of 4 bars or more that
+   * repeats bars already played is skipped (unless the lesson asked for those bars); a short
+   * progression goes round twice, the second time with the names hidden.
+   */
+  _songPlan() {
+    const def = this.songDef;
+    if (!def || !this.songMode) return null;
+    const e = this.embedded || {};
+    const hands = this.lv.hands === 'L' ? 'L' : 'R';
+    const id = `${def.id}|${hands}|${e.fromBar ?? ''}|${e.toBar ?? ''}|${e.passes ?? ''}`;
+    if (this.plan?.id === id) return this.plan;
+    const score = buildScore(def);
+    const nBars = score.barlines.length + 1;
+    const starts = [0, ...score.barlines, score.length];
+    const ranged = e.fromBar !== undefined || e.toBar !== undefined;
+    const lo = clamp(e.fromBar ?? 0, 0, nBars - 1), hi = clamp(e.toBar ?? nBars - 1, lo, nBars - 1);
+    const t0 = starts[lo], t1 = starts[hi + 1] ?? score.length;
+    const segs = chartSegments(score)
+      .filter((g) => g.t + g.d > t0 + 1e-6 && g.t < t1 - 1e-6)
+      .map((g) => {
+        const t = Math.max(g.t, t0), end = Math.min(g.t + g.d, t1);
+        // the right hand plays root positions; the left hand follows the chart's bass (G/B ≠ G)
+        const tri = g.chord ? chordFromSymbol(g.chord.sym, hands === 'L' ? 'bass' : 'treble', hands === 'L', true) : null;
+        return { t, end, sym: tri ? g.chord.sym : null, name: tri?.name || null, bar: songBar(score, t + 1e-3) };
+      });
+    // repeats: a phrase (4 bars or more, starting on a 4-bar boundary) that is the same as one
+    // already played is played once
+    const skip = new Set(), repeats = [];
+    if (!ranged) {
+      const bars = [...new Set(segs.map((g) => g.bar))];
+      const sig = new Map(bars.map((b) => [b, segs.filter((g) => g.bar === b).map((g) => `${g.name}@${(g.t - starts[b]).toFixed(2)}+${(g.end - g.t).toFixed(2)}`).join(' ')]));
+      for (let i = 4; i < bars.length; i += 4) {
+        let best = null;
+        for (let j = 0; j < i; j += 4) {
+          let L = 0;
+          while (j + L < i && i + L < bars.length && sig.get(bars[j + L]) === sig.get(bars[i + L])) L++;
+          L -= L % 4;
+          if (L >= 4 && (!best || L > best.L)) best = { j, L };
+        }
+        if (!best) continue;
+        for (let k = 0; k < best.L; k++) skip.add(bars[i + k]);
+        repeats.push({ from: bars[i], to: bars[i + best.L - 1], ofFrom: bars[best.j], ofTo: bars[best.j + best.L - 1] });
+        i += best.L - 4;
+      }
+    }
+    // spans: one helicopter per chord, merged while the chord carries on
+    const spans = [];
+    let joinable = false;
+    for (const g of segs) {
+      if (skip.has(g.bar) || !g.sym) {
+        if (skip.has(g.bar) && spans.length && !spans[spans.length - 1].repeat) spans[spans.length - 1].repeat = repeats.find((r) => r.from === g.bar);
+        joinable = false;
+        continue;
+      }
+      const last = spans[spans.length - 1];
+      if (joinable && last.name === g.name && Math.abs(last.end - g.t) < 1e-6) last.end = g.end;
+      else spans.push({ sym: g.sym, name: g.name, t: g.t, end: g.end, brk: !joinable });
+      joinable = true;
+    }
+    // voice each chord for the hand; a shape that doesn't change (G/D then G as root and fifth) stays one helicopter
+    const lh = hands === 'L' ? this._leftHand(score, segs) : null;
+    let once = [];
+    for (const sp of spans) {
+      const c = lh ? this._lhChord(sp, lh) : chordFromSymbol(sp.sym, 'treble', false, true);
+      const last = once[once.length - 1];
+      if (last && !sp.brk && last.name === c.name && last.notes.join() === c.notes.join() && Math.abs(last.span.end - sp.t) < 1e-6) {
+        last.span.end = sp.end;
+        last.span.repeat = sp.repeat;
+        continue;
+      }
+      once.push({ ...c, span: { ...sp }, pass: 1 });
+    }
+    const capped = once.length > 40;
+    once = once.slice(0, 40);
+    for (const [k, c] of once.entries()) {
+      const sp = c.span;
+      sp.k = k;
+      sp.fromBar = songBar(score, sp.t + 1e-3);
+      sp.toBar = songBar(score, sp.end - 1e-3);
+      sp.beats = sp.end - sp.t;
+      sp.whole = Math.abs(sp.t - starts[sp.fromBar]) < 1e-6 && Math.abs(sp.end - starts[sp.toBar + 1]) < 1e-6;
+    }
+    const passes = clamp(e.passes ?? (once.length <= 12 ? 2 : 1), 1, 2);
+    const seq = passes > 1 ? [...once, ...once.map((c) => ({ ...c, span: { ...c.span }, pass: 2 }))] : once;
+    const all = seq.flatMap((c) => c.notes);
+    const staves = hands === 'L' ? (Math.max(...all) > 64 ? 'grand' : 'bass') : 'treble';
+    this.plan = {
+      id, def, title: def.title, hands, score, nBars, bpb: score.bpb, spans: once, seq, passes, repeats, staves, capped,
+      from: once.length ? once[0].span.fromBar : lo, to: once.length ? once[once.length - 1].span.toBar : hi, ranged,
     };
-    if (id && id !== 'auto') { const r = tryId(id); if (r) return r; }
-    // songs this learner has played, else a few well-known tunes; three chords or more if possible
-    const played = Object.keys(this.app.store.data.songs || {}).map(tryId).filter(Boolean);
-    const list = played.length ? played : SONG_FALLBACK.map(tryId).filter(Boolean);
-    const rich = list.filter((r) => r.distinct >= 3);
-    return (rich.length ? pick(rich) : list.length ? pick(list) : null);
+    return this.plan;
   }
 
-  /** Where this round's chords come from: { chords, song } (song = { song, prog } or null). */
+  /** How the song's left hand plays: its chord shapes, and whether its single notes outline roots and fifths. */
+  _leftHand(score, segs) {
+    const at = new Map();
+    for (const n of score.notes) if (n.hand === 'L') (at.get(n.t) || at.set(n.t, []).get(n.t)).push(n.midi);
+    const groups = [...at.entries()].map(([t, ms]) => ({ t, notes: [...new Set(ms)].sort((a, b) => a - b) }));
+    const chords = groups.filter((g) => new Set(g.notes.map(pc)).size >= 2);
+    let style;
+    if (chords.length >= 3) style = chords.filter((g) => g.notes.length >= 3).length > chords.length / 2 ? 'triad' : 'power';
+    else {
+      // single notes: if they keep to the root and fifth of each chord, the left hand thinks in fifths
+      let rf = 0, n = 0;
+      for (const g of groups) {
+        const seg = segs.find((x) => x.sym && g.t >= x.t - 1e-6 && g.t < x.end - 1e-6);
+        const p = seg && parseChord(seg.sym);
+        if (!p) continue;
+        for (const m of g.notes) { n++; if ([0, 7].includes(pc(m - p.root))) rf++; }
+      }
+      style = n && rf / n >= 0.8 ? 'power' : 'triad';
+    }
+    return { chords, style };
+  }
+
+  /** A left-hand chord for one span: the shape the song's left hand plays there, else its usual kind. */
+  _lhChord(sp, lh) {
+    const p = parseChord(sp.sym.replace(/♯/g, '#').replace(/♭/g, 'b'));
+    const tones = p.ivs.map((v) => pc(p.root + v));
+    const here = lh.chords.filter((g) => g.t >= sp.t - 1e-6 && g.t < sp.end - 1e-6 && g.notes.every((m) => tones.includes(pc(m))));
+    if (here.length) {
+      const count = new Map();
+      for (const g of here) count.set(g.notes.join(), (count.get(g.notes.join()) || 0) + 1);
+      const best = [...count.entries()].sort((a, b) => b[1] - a[1])[0][0];
+      return voiceSymbol(sp.sym, best.split(',').map(Number));
+    }
+    if (lh.style === 'power') {
+      const root = near(p.root, 43);
+      const fifth = p.ivs.find((v) => [7, 6, 8].includes(v)) ?? 7;
+      return voiceSymbol(sp.sym, [root, root + fifth]);
+    }
+    return chordFromSymbol(sp.sym, 'bass', true, true);
+  }
+
+  /** Where this round's chords come from: { chords, ordered } or { chords, plan }. */
   _source() {
     const e = this.embedded || {}, lv = this.lv, staves = this._staves();
     const list = (arr) => arr.map((c) => toChord(c, staves)).filter(Boolean);
     if (e.chords?.length) { const c = list(e.chords); if (c.length) return { chords: c, ordered: true }; }
-    const songId = e.song || (!e.chords && !GAME.levels[this.level].chords ? lv.song : null);
-    if (songId) {
-      if (!this.song || (songId !== 'auto' && this.song.song.id !== songId)) this.song = this._pickSong(songId);
-      if (this.song) return { chords: this.song.prog, song: this.song };
-    }
+    const plan = this._songPlan();
+    if (plan?.seq.length) return { chords: plan.seq, plan };
     const c = list(lv.chords || GAME.levels[2].chords);
     return { chords: c.length ? c : list(GAME.levels[2].chords) };
   }
@@ -356,18 +514,11 @@ export class Game extends ArcadeBase {
   _sequence() {
     const n = Math.max(1, this.lv.count || 10);
     const src = this._source();
-    this.songTitle = src.song ? src.song.song.title : null;
+    this.songTitle = src.plan ? src.plan.title : null;
+    if (src.plan) return src.plan.seq;   // the song, in order
     const seq = [];
     if (src.ordered) {    // a lesson's own list, in its order
       for (let i = 0; i < n; i++) seq.push(src.chords[i % src.chords.length]);
-      return seq;
-    }
-    if (src.song) {
-      // in the song's own order, so the round walks through its progression
-      for (let i = 0; seq.length < n && i < n * 4; i++) {
-        const c = src.chords[i % src.chords.length];
-        if (c.name !== seq[seq.length - 1]?.name) seq.push(c);
-      }
       return seq;
     }
     // otherwise shuffled, each chord once before any repeats, never the same twice running
@@ -385,12 +536,28 @@ export class Game extends ArcadeBase {
     return seq;
   }
 
+  /** "bars 5–6 of 16", plus how long it lasts when that isn't whole bars. */
+  _barsText(span, plan = this.plan) {
+    const a = span.fromBar + 1, b = span.toBar + 1;
+    const range = a === b ? `bar ${a}` : `bars ${a}–${b}`;
+    return `${range} of ${plan.nBars}${span.whole ? '' : ` · ${barsLong(span.beats / plan.bpb, plan.bpb)}`}`;
+  }
+
+  /** What the round covers, for the attract card and the results. */
+  _coverText(plan, upTo = plan.to) {
+    const rep = plan.repeats.filter((r) => r.from <= upTo + 1).map((r) => `${r.from + 1}–${r.to + 1} repeat ${r.ofFrom + 1}–${r.ofTo + 1}`);
+    return `bars ${plan.from + 1}–${upTo + 1} of ${plan.nBars}${rep.length ? ` (${rep.join(', ')})` : ''}`;
+  }
+
   // ---------- round ----------
-  /** The attract card names the song on the "Chords from a song" level. */
+  /** On a song level the attract card also says what the round covers and with which hand. */
   _attractPanel() {
     super._attractPanel();
+    const plan = this.songMode && this._songPlan();
     const how = this.stage.panel.querySelector('.ar-how');
-    if (how && this.song && !GAME.levels[this.level].chords) how.after(h('p', { class: 'ar-how rc-song' }, `This round: chords from ${this.song.song.title}.`));
+    if (!plan || !how) return;
+    const hand = plan.hands === 'L' ? 'Left hand, on the bass staff' : 'Right hand, around middle C';
+    how.after(h('p', { class: 'ar-how rc-song' }, `${hand}: ${plan.spans.length} chords, ${this._coverText(plan)}${plan.passes > 1 ? ', twice through' : ''}.`));
   }
 
   attract() {
@@ -412,12 +579,13 @@ export class Game extends ArcadeBase {
     this.score = 0; this.streak = 0; this.bestStreak = 0;
     this.good = 0; this.bad = 0; this.landed = 0; this.menSeen = 0; this.bonus = 0;
     this.fastest = Infinity; this.spawned = 0; this.endIn = null;
+    this.results = []; this.chordStats = new Map(); this.passCard = false;
     this.seq = this._sequence();
     this.total = this.seq.length;
     this.noun = this.seq.every((c) => c.notes.length === 1) ? 'note' : 'chord';
     const all = this.seq.flatMap((c) => c.notes);
     this.app.keyboard.need(Math.min(...all), Math.max(...all));
-    if (this.songTitle) this._titleCard('Chords from', this.songTitle);
+    if (this.songTitle) this._titleCard(this.plan.hands === 'L' ? 'Left-hand chords from' : 'Chords from', this.songTitle);
     this._after(this.songTitle ? 1.9 : 0.45, () => this._next());
     this.app.ui.prompt(this.embedded?.text || this._promptText());
     this.app.ui.status('');
@@ -427,21 +595,37 @@ export class Game extends ArcadeBase {
   }
 
   _promptText() {
-    if (this.songTitle) return `Chords from ${this.songTitle}. Hold each chord down before the timer runs out.`;
+    if (this.songTitle) return `${this.songTitle}${this.plan.hands === 'L' ? ', left hand' : ''}: play the song’s chords in order, bar by bar.`;
     if (this.seq.every((c) => c.notes.length === 1)) return 'Play the note the helicopter is towing before the timer runs out.';
     return 'Hold the whole chord down together. Notes you are holding turn green.';
   }
 
   _timeFor(i) {
     const f = this.total > 1 ? i / (this.total - 1) : 0;
-    return (this.lv.time || 8) * (1 - 0.3 * f);
+    const base = this.songMode ? this.embedded?.time ?? GAME.levels[7].time : this.lv.time;
+    return (base || 8) * (1 - 0.3 * f);
   }
+
+  /** Show chord names before the answer? Song mode does (it's learning the chart) unless told not to. */
+  _names() { return this.songMode ? this.embedded?.names ?? true : !!this.lv.names; }
 
   _next() {
     if (this.mode !== 'play' || this.spawned >= this.total) return;
+    if (this.seq[this.spawned].pass === 2 && !this.passCard) {
+      // second time through the song: the names are hidden, so it's the chart from memory
+      this.passCard = true;
+      this._titleCard('Second time through', 'Names hidden');
+      this.app.ui.status('Again from the top. This time the names stay hidden until you play.');
+      this._after(1.9, () => this._next());
+      this._strip();
+      return;
+    }
     const i = this.spawned++;
     this.cur = this._spawn(this.seq[i]);
-    this.app.ui.status(this.streak > 2 ? `${this.streak} in a row` : '');
+    const prev = this.seq[i - 1]?.span, span = this.seq[i].span;
+    const skipped = prev && span && span.k > 0 && prev.repeat;
+    this.app.ui.status(skipped ? `Bars ${prev.repeat.from + 1}–${prev.repeat.to + 1} repeat bars ${prev.repeat.ofFrom + 1}–${prev.repeat.ofTo + 1}, so on to bar ${span.fromBar + 1}.`
+      : this.streak > 2 ? `${this.streak} in a row` : '');
     this._check(this.cur);
     this._hud();
   }
@@ -493,7 +677,7 @@ export class Game extends ArcadeBase {
       // fresh key press is still needed before it can be judged
       armed: new Set(attract ? [] : chord.notes.filter((m) => this.down.has(m))), fresh: false,
       wrong: [], stale: [], men: chord.notes.length, jumped: 0,
-      revealed: !!this.lv.names, answered: false, result: null,
+      revealed: this._names() && chord.pass !== 2, answered: false, result: null,
     };
     hl.left = hl.time;
     hl.chordG = svg('g', { class: 'rc-cargo' }, this.stage.layers.back);
@@ -554,26 +738,60 @@ export class Game extends ArcadeBase {
     }
   }
 
-  /** The name banner towed behind the tail: the chord name, or '?' until it has been played. */
+  /**
+   * The banner towed behind the tail: the chord name (or '?' until it has been played) and, in
+   * song mode, a second line with the bars it lasts (and the song title where there is room).
+   */
   _drawBanner(hl) {
     const g = hl.bannerG;
     g.textContent = '';
-    const text = hl.revealed ? hl.chord.name : '?';
-    svg('path', { d: 'M4.72,-0.24 L5.3,-0.66 M4.72,-0.24 L5.3,0.3', class: 'rc-bridle' }, g);
+    const k = this.geo.hs * this.geo.sp;                  // px per helicopter unit
+    const span = hl.chord.span && this.plan && this.mode !== 'attract' ? hl.chord.span : null;
+    const fs1 = Math.max(0.78, 14 / k), fs2 = Math.max(0.46, 10.5 / k), pad = 0.2;
+    const lines = [hl.revealed ? hl.chord.name : '?'];
+    // the second line says as much as fits between the tail and the edge of the stage
+    const fits = [];
+    if (span) {
+      const title = this.plan.title.length > 24 ? `${this.plan.title.slice(0, 23)}…` : this.plan.title;
+      const full = this._barsText(span), bars = full.split(' · ')[0];
+      const range = bars.replace(/ of \d+$/, ''), dur = full.includes(' · ') ? ` · ${full.split(' · ')[1]}` : '';
+      fits.push(`${title} · ${full}`, full, `${range}${dur}`, bars, range);
+      lines.push(fits[0]);
+    }
+    const H = pad * 2 + fs1 * 0.95 + (span ? fs2 * 1.25 : 0);
+    hl.flagTop = -0.2 - H / 2;
+    hl.flagBot = -0.2 + H / 2;
+    svg('path', { d: `M4.72,-0.24 L5.3,${hl.flagTop.toFixed(2)} M4.72,-0.24 L5.3,${hl.flagBot.toFixed(2)}`, class: 'rc-bridle' }, g);
     hl.flag = svg('path', { class: `rc-banner${hl.answered ? ' is-answer' : ''}` }, g);
-    const t = svg('text', { x: 0, y: 0.08, 'font-size': 0.78, 'text-anchor': 'middle', class: 'rc-banner-text' }, g);
-    t.textContent = text;
+    hl.flagText = lines.map((txt, i) => {
+      const t = svg('text', { x: 0, y: 0, 'font-size': i ? fs2 : fs1, 'text-anchor': 'middle', class: i ? 'rc-banner-sub' : 'rc-banner-text' }, g);
+      t.textContent = txt;
+      return t;
+    });
+    hl.flagY = [hl.flagTop + pad + fs1 * 0.78, hl.flagTop + pad + fs1 * 0.95 + fs2 * 0.95];
+    if (fits.length) {
+      const room = (this.stage.w - 6 - (this.geo.hookX - 0.75 * k)) / k - 5.3 - 0.8;
+      const sub = hl.flagText[1];
+      for (const txt of fits) {
+        sub.textContent = txt;
+        let tw = 0;
+        try { tw = sub.getComputedTextLength(); } catch { /* not laid out */ }
+        if ((tw || 0.5 * txt.length * fs2) <= room) break;
+      }
+    }
     let w = 0;
-    try { w = t.getComputedTextLength(); } catch { /* not laid out */ }
-    if (!w) w = 0.5 * text.length;
+    for (const t of hl.flagText) {
+      let tw = 0;
+      try { tw = t.getComputedTextLength(); } catch { /* not laid out */ }
+      w = Math.max(w, tw || 0.5 * t.textContent.length * +t.getAttribute('font-size'));
+    }
     hl.flagW = Math.max(1.35, w + 0.8);
-    hl.flagText = t;
     this._waveBanner(hl);
   }
 
   _waveBanner(hl) {
     if (!hl.flag) return;
-    const x0 = 5.3, W = hl.flagW, top = -0.66, bot = 0.3, n = 6;
+    const x0 = 5.3, W = hl.flagW, top = hl.flagTop, bot = hl.flagBot, n = 6;
     const wv = (x) => 0.09 * Math.sin(hl.wave - x * 2.3) * ((x - x0) / W + 0.15);
     let up = '', dn = '';
     for (let i = 0; i <= n; i++) {
@@ -584,8 +802,10 @@ export class Game extends ArcadeBase {
     }
     hl.flag.setAttribute('d', `${up}${dn}Z`);
     const xc = x0 + W / 2;
-    hl.flagText.setAttribute('x', xc.toFixed(2));
-    hl.flagText.setAttribute('y', (0.1 + wv(xc)).toFixed(3));
+    hl.flagText.forEach((t, i) => {
+      t.setAttribute('x', xc.toFixed(2));
+      t.setAttribute('y', (hl.flagY[i] + wv(xc)).toFixed(3));
+    });
   }
 
   _placeHeli(hl) {
@@ -727,15 +947,18 @@ export class Game extends ArcadeBase {
       }
     }
     for (const e of ledg.values()) svg('line', { x1: e.l, x2: e.r, y1: e.y, y2: e.y, class: `ar-ledger ${ledgerCls}` }, parent);
+    // accidentals against the key signature on the staff (a natural where the key says otherwise)
     let left = -W / 2;
-    const accs = items.filter((it) => it.alter && GLYPH.acc[String(it.alter)]).sort((a, b) => a.y - b.y);
+    const sig = keySigMap(st.opts.key);
+    for (const it of items) it.acc = it.alter !== (sig[it.letter] || 0) ? it.alter : null;
+    const accs = items.filter((it) => it.acc !== null && GLYPH.acc[String(it.acc)]).sort((a, b) => a.y - b.y);
     const cols = [];
     for (const it of accs) {
       let c = 0;
       while ((cols[c] || []).some((o) => Math.abs(o.y - it.y) < 3 * sp)) c++;
       (cols[c] ||= []).push(it);
-      const x = -W / 2 - 0.24 * sp - c * 1.15 * sp - ACC_W[it.alter] * sp;
-      els.get(it.midi).acc = st.glyph(parent, GLYPH.acc[String(it.alter)], x, it.y, it.cls || cls);
+      const x = -W / 2 - 0.24 * sp - c * 1.15 * sp - ACC_W[it.acc] * sp;
+      els.get(it.midi).acc = st.glyph(parent, GLYPH.acc[String(it.acc)], x, it.y, it.cls || cls);
       left = Math.min(left, x);
     }
     let right = W / 2;
@@ -773,8 +996,10 @@ export class Game extends ArcadeBase {
     if (!list.length) return;
     const sp = this.stage.sp;
     hl.wrongG = svg('g', { class: 'rc-played' }, hl.chordG);
-    const prefer = hl.chord.heads.some((x) => x.alter < 0) ? 'flat' : 'sharp';
-    const heads = list.map((m) => ({ ...headOf(m, spell(m, 'C', prefer).letter), cls: hl.wrong.includes(m) ? '' : 'rc-wrong rc-stale' }));
+    const flats = hl.chord.heads.some((x) => x.alter < 0), sharps = hl.chord.heads.some((x) => x.alter > 0);
+    const prefer = flats ? 'flat' : sharps ? 'sharp' : undefined;   // else as the key spells it
+    const key = this.stage.opts.key;
+    const heads = list.map((m) => ({ ...headOf(m, spell(m, key, prefer).letter), cls: hl.wrong.includes(m) ? '' : 'rc-wrong rc-stale' }));
     const col = this._column(hl.wrongG, heads, { cls: 'rc-wrong', labels: true, ledgerCls: 'rc-wrong-ledger' });
     const dx = hl.colRight + 0.55 * sp - col.left;
     hl.wrongG.setAttribute('transform', `translate(${dx.toFixed(1)} 0)`);
@@ -866,8 +1091,10 @@ export class Game extends ArcadeBase {
   _success(hl) {
     hl.phase = 'drop'; hl.pt = 0; hl.result = 'ok';
     if (this.cur === hl) this.cur = null;
-    const bonus = Math.round(TIME_PTS * clamp(hl.doneLeft / hl.time, 0, 1));
+    const frac = clamp(hl.doneLeft / hl.time, 0, 1);
+    const bonus = Math.round(TIME_PTS * frac);
     const pts = MAN_PTS * hl.men;
+    this._tally(hl, true, frac < 0.35);
     this.score += pts + bonus;
     this.bonus += bonus;
     this.good++; this.landed += hl.men; this.menSeen += hl.men;
@@ -888,6 +1115,7 @@ export class Game extends ArcadeBase {
     hl.phase = 'reveal'; hl.pt = 0; hl.result = 'fail';
     if (this.cur === hl) this.cur = null;
     this.bad++; this.menSeen += hl.men; this.streak = 0;
+    this._tally(hl, false);
     const missing = hl.chord.notes.filter((m) => !hl.armed.has(m));
     if (why === 'time') {
       this.app.coach.record('missed', { expected: missing[0] ?? hl.chord.notes[0] });
@@ -922,7 +1150,8 @@ export class Game extends ArcadeBase {
     const c = hl.chord;
     const from = c.from ? ` (the song’s ${c.from}, as a triad)` : '';
     const streak = this.streak > 2 ? ` · ${this.streak} in a row` : '';
-    this.app.ui.status(`${lead ? `${lead} ` : ''}${c.long}${c.letters ? `: ${c.letters}` : ''}${from}${streak}`);
+    const bars = c.span && this.plan ? ` · ${this._barsText(c.span)}` : '';
+    this.app.ui.status(`${lead ? `${lead} ` : ''}${c.long}${c.letters ? `: ${c.letters}` : ''}${from}${bars}${streak}`);
   }
 
   // ---------- parachutists ----------
@@ -1121,7 +1350,7 @@ export class Game extends ArcadeBase {
     if (!this.hudG || !this.hudG.isConnected) this.hudG = svg('g', { class: 'ar-hudtext' }, st.layers.hud);
     const g = this.hudG;
     g.textContent = '';
-    if (this.mode !== 'play') return;
+    if (this.mode !== 'play') { this.stripG?.remove(); this.stripG = null; return; }
     const fs = clamp(sp * 0.95, 11, 17);
     const y = G.groundY + G.band * 0.56 + fs * 0.35;
     const label = (x, anchor, k, v) => {
@@ -1130,7 +1359,70 @@ export class Game extends ArcadeBase {
       svg('tspan', { class: 'ar-hud-v' }, t).textContent = v;
     };
     label(st.left + 0.6 * sp, 'start', 'SCORE', this.score.toLocaleString());
+    if (this.plan && this.songTitle) { this._strip(); return; }
     label(st.right - 0.6 * sp, 'end', `${this.noun.toUpperCase()}S`, `${this.good} played · ${this.total - this.good - this.bad} to go`);
+  }
+
+  /**
+   * Song mode: the progression as a strip of chord cells along the ground, the current chord lit,
+   * the played ones marked, a repeat sign where a repeated section was skipped. Long songs scroll.
+   */
+  _strip() {
+    const st = this.stage, G = this.geo, sp = st.sp, plan = this.plan;
+    this.stripG?.remove();
+    this.stripG = null;
+    if (this.mode !== 'play' || !plan || !this.songTitle) return;
+    const g = this.stripG = svg('g', { class: 'rc-strip' }, st.layers.hud);
+    const fs = clamp(sp * 0.78, 10.5, 15), ch = Math.min(G.band * 0.66, fs * 1.85), gap = fs * 0.3;
+    const cy = G.groundY + G.band * 0.54;
+    const x0 = st.left + 0.6 * sp + clamp(sp * 0.95, 11, 17) * 7.2, x1 = st.right - 0.6 * sp, room = x1 - x0;
+    const n = plan.spans.length;
+    // the chord in the air is lit; between helicopters the strip stays on the last one played
+    const now = this.cur ? this.cur.idx : -1;
+    const at = this.cur ? this.cur.idx : clamp(this.spawned - (this.passCard && this.spawned === n ? 0 : 1), 0, this.total - 1);
+    const base = at >= n ? n : 0;                        // which time through
+    const cells = plan.spans.map(({ span }, k) => {
+      const i = base + k, r = this.results[i];
+      const label = this.seq[i].pass === 2 && !r ? '?' : this.seq[i].name;
+      const w = fs * (0.6 * label.length + 1.2) + Math.min(4, span.beats / plan.bpb) * fs * 0.45;
+      return { i, label, w, r, now: i === now, repeat: span.repeat ? fs * 1.3 : 0 };
+    });
+    const width = (a, b) => cells.slice(a, b + 1).reduce((t, c) => t + c.w + gap + c.repeat, 0);
+    let a = 0, b = cells.length - 1;
+    if (width(a, b) > room) {
+      const k = clamp(at - base, 0, cells.length - 1);
+      a = b = k;
+      while (a > 0 && width(a - 1, b) < room * 0.3) a--;
+      while (b < cells.length - 1 && width(a, b + 1) <= room - fs) b++;
+      while (a > 0 && width(a - 1, b) <= room - fs) a--;
+    }
+    let x = x0;
+    const more = (xx) => { const t = svg('text', { x: xx, y: cy + fs * 0.36, 'font-size': fs, 'text-anchor': 'middle', class: 'rc-cell-more' }, g); t.textContent = '…'; };
+    if (a > 0) { more(x + fs * 0.4); x += fs; }
+    for (const c of cells.slice(a, b + 1)) {
+      const cls = c.now ? ' now' : c.r === 'ok' ? ' ok' : c.r === 'miss' ? ' miss' : '';
+      svg('rect', { x: x.toFixed(1), y: (cy - ch / 2).toFixed(1), width: c.w.toFixed(1), height: ch.toFixed(1), rx: (ch * 0.3).toFixed(1), class: `rc-cell${cls}` }, g);
+      const t = svg('text', { x: (x + c.w / 2).toFixed(1), y: (cy + fs * 0.36).toFixed(1), 'font-size': fs, 'text-anchor': 'middle', class: `rc-cell-t${cls}` }, g);
+      t.textContent = c.label;
+      x += c.w + gap;
+      if (c.repeat) {
+        // a repeat sign: what follows in the song is a section already played
+        const rs = svg('text', { x: x.toFixed(1), y: (cy + ch / 2).toFixed(1), 'font-size': ch, class: 'ar-glyph rc-cell-rpt' }, g);
+        rs.textContent = '\uE041';
+        x += c.repeat;
+      }
+    }
+    if (b < cells.length - 1) more(Math.min(x1 - fs * 0.4, x + fs * 0.4));
+  }
+
+  /** Tally a resolved chord: for the strip, and per chord of the song for the results. */
+  _tally(hl, ok, slow = false) {
+    this.results[hl.idx] = ok ? 'ok' : 'miss';
+    if (!this.plan || !this.songTitle) return;
+    const s = this.chordStats.get(hl.chord.name) || { chord: hl.chord, tries: 0, miss: 0, slow: 0 };
+    s.tries++;
+    if (!ok) s.miss++; else if (slow) s.slow++;
+    this.chordStats.set(hl.chord.name, s);
   }
 
   _titleCard(kicker, title) {
@@ -1166,13 +1458,16 @@ export class Game extends ArcadeBase {
     this._hud();
     this.app.ui.status('');
     if (!stopped && acc >= 0.9) this.sfx.fanfare();
-    const from = this.songTitle ? ` from ${this.songTitle}` : '';
-    this.song = null;                 // the next round picks another song
+    const passed = acc >= (this.embedded?.pass ?? 0.7);
+    if (this.plan && this.songTitle) {
+      this.finish({ score: this.score, accuracy: acc, passed, ...this._songResults(total) });
+      return;
+    }
     this.finish({
       score: this.score,
       accuracy: acc,
-      passed: acc >= (this.embedded?.pass ?? 0.7),
-      detail: `${this.good} of ${total} ${this.noun}s${from} played, ${this.landed} parachutist${this.landed === 1 ? '' : 's'} landed safely.`,
+      passed,
+      detail: `${this.good} of ${total} ${this.noun}s played, ${this.landed} parachutist${this.landed === 1 ? '' : 's'} landed safely.`,
       stats: [
         [`${this.noun === 'note' ? 'Notes' : 'Chords'} played`, `${this.good} of ${total}`],
         ['Parachutists landed', `${this.landed} of ${men}`],
@@ -1180,6 +1475,31 @@ export class Game extends ArcadeBase {
         [`Fastest ${this.noun}`, this.fastest < Infinity ? `${this.fastest.toFixed(1)} s` : '–'],
       ],
     });
+  }
+
+  /** Song mode results: what part of the song was covered, and which of its chords were shaky. */
+  _songResults(total) {
+    const plan = this.plan;
+    const done = this.seq.slice(0, this.good + this.bad);
+    const upTo = done.length ? Math.max(...done.map((c) => c.span.toBar)) : plan.from;
+    const shaky = [...this.chordStats.values()].filter((x) => x.miss || x.slow).sort((a, b) => b.miss - a.miss || b.slow - a.slow);
+    const top = shaky[0];
+    let work;
+    if (top) {
+      const what = top.miss ? `missed ${top.miss} of ${top.tries} time${top.tries === 1 ? '' : 's'}` : `slow ${top.slow} of ${top.tries} time${top.tries === 1 ? '' : 's'}`;
+      work = `Work on ${top.chord.long} (${top.chord.letters || top.chord.name}): ${what}.`;
+    } else if (!done.length) work = '';
+    else work = plan.hands === 'R' && this.songHasHand('L') ? 'Every chord was solid. Try the left hand next.' : 'Every chord was solid. Now play the song for real.';
+    const rep = plan.repeats.filter((r) => r.from <= upTo + 1);
+    return {
+      detail: `${plan.title}${plan.hands === 'L' ? ', left hand' : ''}, ${this._coverText(plan, upTo)}: ${this.good} of ${total} chords played. ${work}`.trim(),
+      stats: [
+        ['Chords played', `${this.good} of ${total}${plan.passes > 1 ? ' (twice through)' : ''}`],
+        ['Bars covered', `${plan.from + 1}–${upTo + 1} of ${plan.nBars}${rep.length ? ` (${rep.map((r) => `${r.from + 1}–${r.to + 1}`).join(', ')} repeat)` : ''}`],
+        ['Shaky chords', shaky.length ? shaky.slice(0, 4).map((x) => x.chord.name).join(', ') : 'None'],
+        ['Time bonus', `+${this.bonus.toLocaleString()}`],
+      ],
+    };
   }
 
   exit() {
