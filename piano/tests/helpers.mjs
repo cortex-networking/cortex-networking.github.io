@@ -85,3 +85,11 @@ export function fakeApp({ store, settings = {}, latency = 0 } = {}) {
   app.renderList = () => {};
   return app;
 }
+
+/**
+ * Advance node:test mock timers in small steps. MockTimers.tick() does not run timers that are
+ * created by callbacks during the same tick, and the app chains timers (step done -> next step).
+ */
+export function advance(t, ms, step = 10) {
+  for (let k = 0; k < ms; k += step) t.mock.timers.tick(Math.min(step, ms - k));
+}
