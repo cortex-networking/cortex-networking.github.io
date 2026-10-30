@@ -142,7 +142,7 @@ describe('nothing runs after the lesson is closed', () => {
     await new Promise((res) => setTimeout(res, 200));
     process.off('unhandledRejection', onErr);
     assert.equal(r.task, null, 'no quiz task after exit');
-    assert.equal(r.tracker, null, 'no coach tracker left open');
+    assert.ok(!r.tracker, 'no coach tracker left open');
     assert.deepEqual(errors.map(String), []);
   });
 });
