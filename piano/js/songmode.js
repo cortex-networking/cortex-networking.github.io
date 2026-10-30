@@ -158,47 +158,11 @@ export class SongMode {
         if (routine) this.app.practice(routine);
       } }, 'Practice the tricky part'));
     }
-    if (r.mode === 'play' && this.performance?.length) {
-      actions.push(h('button', { class: 'btn quiet', onclick: (e) => this._saveTake(e.target) }, 'Save this take to the studio'));
-    }
     this.renderControls(actions.length ? h('div', { class: 'controls' }, ...actions) : null);
   }
 
-  noteOn(e) {
-    if (this.session?.running && this.opts.mode === 'play') {
-      if (!this.performance || this.session.t0 !== this.perfT0) { this.performance = []; this.perfT0 = this.session.t0; this.perfOpen = new Map(); }
-      const beat = (this.session._inputTime(e.time) - this.app.sound.latency - this.session.t0) / this.session.spb;
-      const n = { t: Math.max(0, beat), d: 0.25, midi: e.midi, vel: e.vel };
-      this.performance.push(n);
-      this.perfOpen.set(e.midi, n);
-    }
-    this.session?.noteOn(e.midi, e.time, e.vel, e.source);
-  }
-
-  noteOff(e) {
-    const n = this.perfOpen?.get(e.midi);
-    if (n && this.session) {
-      const beat = (this.session._inputTime(e.time) - this.app.sound.latency - this.session.t0) / this.session.spb;
-      n.d = Math.max(0.1, beat - n.t);
-      this.perfOpen.delete(e.midi);
-    }
-    this.session?.noteOff(e.midi, e.time);
-  }
-
-  async _saveTake(btn) {
-    let mod = null;
-    try { mod = await import('./studio.js'); } catch { mod = null; }
-    if (!mod?.saveRecording) { this.app.ui.toast('The studio isn’t available right now.'); return; }
-    const tracks = [{ name: 'Your take', instrument: this.app.settings.instrument || 'grand', notes: this.performance.map((n) => ({ ...n })) }];
-    if (this.opts.hands !== 'B') {
-      const other = this.score.notes.filter((n) => n.hand !== this.opts.hands).map((n) => ({ t: n.t, d: n.sd ?? n.d, midi: n.midi, vel: 0.6 }));
-      if (other.length) tracks.push({ name: this.opts.hands === 'R' ? 'Left hand' : 'Right hand', instrument: 'grand', notes: other });
-    }
-    mod.saveRecording(this.app.store, { name: `${this.song.title} take`, tempo: Math.round(this.score.tempo * this.opts.tempo), time: this.score.time, tracks });
-    btn.disabled = true;
-    btn.textContent = 'Saved to the studio';
-    this.app.ui.toast('Saved. Open the Studio tab to hear it or add parts.');
-  }
+  noteOn(e) { this.session?.noteOn(e.midi, e.time, e.vel, e.source); }
+  noteOff(e) { this.session?.noteOff(e.midi, e.time); }
 
   pedal() {}
   tick(dt) {

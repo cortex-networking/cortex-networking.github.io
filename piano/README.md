@@ -22,8 +22,6 @@ Live at `/piano/`. Static files, no build step, no tracking, no accounts.
   generated from each song's chord chart in one of eleven styles.
 - **Games**: Note Rush (staff reading), Echo (ear training), Key Hunt (keyboard geography),
   Stepping Stones (rhythm), Chord Stars (chords) and Flashcards (theory).
-- **Studio**: eight-track recorder with count-in, loop, quantize, a piano-roll view, and
-  Standard MIDI File import and export. Song performances can be saved to it as takes.
 - **Free play**: live grand staff plus chord and interval names, metronome.
 - **Profiles**: several learners on one device, each with their own progress, interests,
   practice streak and 14-day practice chart.
@@ -43,7 +41,7 @@ Progress is saved in the browser's local storage only.
 
 ## Files
 
-- `index.html`, `css/app.css`, `css/games.css`, `css/studio.css`
+- `index.html`, `css/app.css`, `css/games.css`
 - `js/theory.js` note spelling, voice parser, chord names
 - `js/staff.js` SVG grand staff (beams, ties, dynamics, key signatures, fingerings)
 - `js/audio.js` sampled piano, synth voices, drum kit, MIDI-out routing
@@ -55,7 +53,6 @@ Progress is saved in the browser's local storage only.
 - `js/songs-*.js`, `js/library.js` songs; `js/catalog.js` joins songs, lessons and games
 - `js/home.js` Learn home, progress page, certificates
 - `js/songmode.js`, `js/modes.js`, `js/gamebase.js`, `js/games-extra.js` songs and games
-- `js/studio.js`, `js/midifile.js` recording studio and MIDI files
 - `js/store.js` profiles and local storage; `js/app.js` shell, routing, settings
 - `fonts/notation-subset.woff2` a subset of Bravura (SIL OFL), renamed per the license
 

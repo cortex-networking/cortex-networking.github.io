@@ -18,7 +18,7 @@ export const INTERESTS = [
   { id: 'starter', label: 'Simple tunes' },
 ];
 
-const blankData = () => ({ lessons: {}, songs: {}, games: {}, coach: null, practice: {}, certs: {}, studio: null });
+const blankData = () => ({ lessons: {}, songs: {}, games: {}, coach: null, practice: {}, certs: {} });
 const uid = () => Math.random().toString(36).slice(2, 9);
 const day = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
