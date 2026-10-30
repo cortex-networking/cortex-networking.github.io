@@ -189,6 +189,21 @@ describe('remedy', () => {
     for (const st of r.steps) if (st.score) assert.ok(st.score.length <= 2 * score.bpb, `excerpt of ${st.score.length} beats`);
   });
 
+  test('a hands-together remedy practises both hands in its timed steps too', () => {
+    // lesson.js _timed() practises only the right hand of a two-hand score unless the step says hands: 'B'
+    const c = makeCoach();
+    const score = buildScore(catalog.song('ode-to-joy'));
+    for (const cat of ['hands', 'neighbor', 'missed', 'chord']) {
+      const r = c.remedy(cat, { score, hands: 'B', bars: [2] });
+      const timed = r.steps.filter((s) => s.type === 'rhythm' && s.score);
+      assert.ok(timed.length, `${cat} has a timed step`);
+      for (const s of timed) assert.equal(s.hands, 'B', `${cat}: "${s.text}"`);
+    }
+    // one hand stays one hand
+    const left = c.remedy('neighbor', { score, hands: 'L', bars: [2] });
+    for (const s of left.steps.filter((x) => x.type === 'rhythm' && x.score)) assert.ok(!s.hands || s.hands === 'L');
+  });
+
   test('a quiz remedy reuses a real generator topic', () => {
     const r = makeCoach().remedy('quiz', { topic: 'key-signatures' });
     assert.equal(r.steps[0].generator, 'key-signatures');
