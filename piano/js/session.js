@@ -286,14 +286,16 @@ export class Session {
       if (b < 0 || (this.o.metronome && this.o.mode !== 'listen')) {
         const rel = b < 0 ? b + this.countInBeats : b - (this.score.pickup || 0);
         const down = Math.abs(((rel % bpb) + bpb) % bpb) < 1e-6;
-        if (b < this.score.length - 1e-6) sound.click(this.t0 + b * spb, down);
+        if (b < this.score.length - 1e-6 && this.t0 + b * spb >= now - 0.05) sound.click(this.t0 + b * spb, down);
       }
       this.clickBeat += this.clickUnit;
       if (this.clickBeat > this.score.length + 4) break;
     }
+    // anything already past (the tab was in the background, or a long stall) is dropped, not piled up at once
     while (this.otherPtr < this.other.length && this.t0 + this.other[this.otherPtr].t * spb < horizon) {
       const e = this.other[this.otherPtr++];
-      this._playOther(e, this.t0 + e.t * spb);
+      const when = this.t0 + e.t * spb;
+      if (when >= now - 0.05) this._playOther(e, when);
     }
     while (this.bandPtr < this.band.length && this.t0 + this.band[this.bandPtr].t * spb < horizon) {
       const e = this.band[this.bandPtr++];

@@ -435,6 +435,10 @@ export class Game extends ArcadeBase {
   }
 
   start() {
+    if (!this.onHide) {
+      this.onHide = () => { if (document.hidden && this.mode === 'run') this.away = true; };
+      document.addEventListener('visibilitychange', this.onHide);
+    }
     this.reset();
     this._setup(false);
     this.resumeBar = null;
@@ -465,6 +469,25 @@ export class Game extends ArcadeBase {
     if (this.ptr < 0) this.ptr = c.notes.length;
     this.attempt++;
     this.mode = 'run';
+    this.lastRun = null;
+    this.away = false;
+    this._hud();
+  }
+
+  /**
+   * The page wasn't drawn for a while (another tab, a sleeping laptop) while the audio clock ran on
+   * without the learner: back to the start of the bar he was in, with no fall and no chance lost.
+   */
+  _rewind() {
+    const c = this.course;
+    for (const b of this.building) b.building = false;
+    this.building.clear();
+    this._stopHum();
+    const from = Math.floor(Math.max(this.rob.beat, this.from) / c.bpb + 1e-6) * c.bpb;
+    for (const n of c.notes) if (n.t >= from - eps) this._clearNote(n);
+    this._paintTokens();
+    this._go(from);
+    this.statusMsg = `Paused while you were away · from bar ${this._barAt(from)}`;
     this._hud();
   }
 
@@ -506,6 +529,9 @@ export class Game extends ArcadeBase {
 
   _runStep() {
     const c = this.course, now = this.now();
+    if (document.hidden) return;   // a stray frame while in the background: wait until the learner is back
+    if (!this.demo && (this.away || (this.lastRun != null && now - this.lastRun > 2))) { this._rewind(); return; }
+    this.lastRun = now;
     const vb = this.beatAt(now);
     const rb = Math.max(vb, this.idle);
     this.rob.beat = rb;
@@ -1086,6 +1112,8 @@ export class Game extends ArcadeBase {
   }
 
   exit() {
+    if (this.onHide) document.removeEventListener('visibilitychange', this.onHide);
+    this.onHide = null;
     for (const id of this.lit?.values() || []) clearTimeout(id);
     this.epoch = (this.epoch || 0) + 1;
     this._stopHum();
