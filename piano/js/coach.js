@@ -227,6 +227,8 @@ export class Coach {
     const lo = Math.min(lastBar, Math.max(0, Math.min(...bars))), hi = Math.min(lo + 1, lastBar, Math.max(lo, ...bars));
     const passage = ctx.score ? excerpt(ctx.score, lo, hi, hands) : null;
     const usable = passage && passage.notes.length >= 2;
+    // timed steps name their hands: lesson.js plays only the right hand of a two-hand score otherwise
+    const ph = passage && passage.hands.R && passage.hands.L ? 'B' : passage?.hands.L ? 'L' : 'R';
     const conf = (ctx.confusions || []).filter(([e]) => e !== undefined);
     const expected = [...new Set(conf.map(([e]) => e))].slice(0, 4);
     const steps = [];
@@ -274,7 +276,7 @@ export class Coach {
             if (phrase.length >= 3) steps.push({ type: 'game', game: 'aliens', params: { phrases: [phrase], count: 1, reps: 3 }, pass: 0.7, text: `Aliens! They play ${where}; copy them with the right fingers.` });
           }
           steps.push({ type: 'seq', score: passage, staves, text: 'Once more, a little more smoothly.' });
-          steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.7, text: 'Now in time, at a slower tempo.' });
+          steps.push({ type: 'rhythm', score: passage, hands: ph, staves, tempoScale: 0.7, text: 'Now in time, at a slower tempo.' });
         } else {
           steps.push({ type: 'seq', rh: 'C4q:1 D4:2 E4:3 F4:4 | G4:5 F4:4 E4:3 D4:2 | C4q:1 E4:3 D4:2 F4:4 | E4:3 G4:5 C4h:1', text: 'Keep each finger over its own key. Slow and exact beats fast and sloppy.' });
         }
@@ -289,7 +291,7 @@ export class Coach {
           : { type: 'game', game: 'roboman', params: { level: 0, bars: 4 }, pass: 0.7, text: 'Roboman: tap the short notes and hold the long ones, right on the click.' });
         if (usable) {
           steps.push({ type: 'tap', score: passage, tempoScale: 0.75, text: `Tap the rhythm of ${where} on any key. Only the timing counts.` });
-          steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.8, text: 'Now with the real notes, still a little slower.' });
+          steps.push({ type: 'rhythm', score: passage, hands: ph, staves, tempoScale: 0.8, text: 'Now with the real notes, still a little slower.' });
         } else {
           steps.push({ type: 'tap', rh: 'B4q B4 B4 B4 | B4h B4h | B4q B4 B4h | B4w', tempo: 72, text: 'Tap on any key, right with the clicks.' });
         }
@@ -299,7 +301,7 @@ export class Coach {
         steps.push({ type: 'say', text: 'Long notes need their full value. Keep the key down and count through the note: a half note is “one, two”, a whole note “one, two, three, four”.' });
         steps.push({ type: 'game', game: 'roboman', params: { rhythm: 'C4h C4h | C4w | C4q C4q C4h | C4w', tempo: 72 }, pass: 0.7, text: 'Roboman: hold each long note until its bridge reaches the other side.' });
         steps.push({ type: 'rhythm', rh: 'C4w | E4h G4h | E4h. rq | C4w', tempo: 72, text: 'Hold each note right up to the next one.' });
-        if (usable) steps.push({ type: 'rhythm', score: passage, staves, tempoScale: 0.8, text: `Now ${where}, holding every long note.` });
+        if (usable) steps.push({ type: 'rhythm', score: passage, hands: ph, staves, tempoScale: 0.8, text: `Now ${where}, holding every long note.` });
         break;
       }
       case 'rest': {
@@ -313,7 +315,7 @@ export class Coach {
         steps.push({ type: 'say', text: 'When notes line up vertically, both hands press at exactly the same moment. Get both hands ready over their keys first, then play together.' });
         if (usable) {
           steps.push({ type: 'seq', score: passage, staves: 'grand', text: `${where[0].toUpperCase() + where.slice(1)}, hands together, as slowly as you like.` });
-          steps.push({ type: 'rhythm', score: passage, staves: 'grand', tempoScale: 0.7, text: 'Now in time, slower.' });
+          steps.push({ type: 'rhythm', score: passage, hands: ph, staves: 'grand', tempoScale: 0.7, text: 'Now in time, slower.' });
         } else {
           steps.push({ type: 'seq', rh: 'C4q:1 D4:2 E4:3 F4:4 | G4w:5', lh: 'C3q:5 B2:1 C3:5 D3:4 | C3w:5', text: 'Hands together, landing at the same moment.' });
         }
