@@ -1,7 +1,9 @@
 // Arcade kit for the Miracle-style games: an SVG stage with its own staff, small sprite and tween
 // helpers, synthesized sound effects, the device-wide Hall of Fame, and ArcadeBase (intro, attract
 // screen, results, and an "embedded" mode so lessons and the coach can run a short round).
-import { spell, noteName } from './theory.js';
+import { spell, noteName, buildScore } from './theory.js';
+import { catalog } from './catalog.js';
+import { barOf } from './coach.js';
 import { GameBase } from './gamebase.js';
 import { h } from './ui.js';
 
@@ -434,6 +436,70 @@ export function fameTable(store, gameId, { highlight = -1, limit = 5, empty = 'N
     h('span', { class: 'ar-score' }, e.score.toLocaleString()))));
 }
 
+
+// ---------- songs: the material for each game's song mode ----------
+/** Bar number (0-based, pickup bar = 0 when there is one) for a beat. */
+export function songBar(score, t) { return barOf(score, t); }
+
+/**
+ * One line of a song for a hand: the top note of each right-hand chord, the bottom of each
+ * left-hand one, in order. Tied continuations are skipped. Optional bar range (inclusive).
+ * Returns [{ midi, t, d, finger, prefer, bar, hand }].
+ */
+export function melodyOf(score, hand = 'R', { fromBar = 0, toBar = Infinity } = {}) {
+  const byT = new Map();
+  for (const n of score.notes) {
+    if ((n.hand || 'R') !== hand || n.tiedFrom) continue;
+    const bar = barOf(score, n.t);
+    if (bar < fromBar || bar > toBar) continue;
+    const cur = byT.get(n.t);
+    if (!cur || (hand === 'R' ? n.midi > cur.midi : n.midi < cur.midi)) byT.set(n.t, { ...n, bar, hand });
+  }
+  return [...byT.values()].sort((a, b) => a.t - b.t)
+    .map((n) => ({ midi: n.midi, t: n.t, d: n.sd ?? n.d, finger: n.finger, prefer: n.prefer, bar: n.bar, hand }));
+}
+
+/**
+ * Split a hand's line into short phrases for learning: whole bars, one or two at a time, aiming
+ * for min..max notes; a very busy bar is cut in half. Returns [{ notes, fromBar, toBar }].
+ */
+export function phrasesOf(score, hand = 'R', { min = 3, max = 8, fromBar = 0, toBar = Infinity } = {}) {
+  const line = melodyOf(score, hand, { fromBar, toBar });
+  const bars = new Map();
+  for (const n of line) (bars.get(n.bar) || bars.set(n.bar, []).get(n.bar)).push(n);
+  const out = [];
+  let cur = null;
+  const flush = () => { if (cur && cur.notes.length) out.push(cur); cur = null; };
+  for (const [bar, notes] of [...bars.entries()].sort((a, b) => a[0] - b[0])) {
+    if (notes.length > max) {
+      flush();
+      const half = Math.ceil(notes.length / 2);
+      out.push({ notes: notes.slice(0, half), fromBar: bar, toBar: bar });
+      out.push({ notes: notes.slice(half), fromBar: bar, toBar: bar });
+      continue;
+    }
+    if (cur && (cur.notes.length + notes.length > max || cur.toBar - cur.fromBar >= 1)) flush();
+    if (!cur) cur = { notes: [], fromBar: bar, toBar: bar };
+    cur.notes.push(...notes);
+    cur.toBar = bar;
+    if (cur.notes.length >= min && cur.toBar - cur.fromBar >= 1) flush();
+  }
+  flush();
+  // fold a tiny last phrase into the one before it
+  if (out.length > 1 && out[out.length - 1].notes.length < min && out[out.length - 2].notes.length + out[out.length - 1].notes.length <= max + 2) {
+    const last = out.pop();
+    const prev = out[out.length - 1];
+    prev.notes.push(...last.notes); prev.toBar = last.toBar;
+  }
+  return out;
+}
+
+/** Songs a player has practised, most recent first. */
+export function recentSongs(store) {
+  return Object.entries(store.data.songs || {}).sort((a, b) => (b[1].at || 0) - (a[1].at || 0))
+    .map(([id]) => catalog.song(id)).filter(Boolean);
+}
+
 // ---------- ArcadeBase ----------
 /**
  * Base for the arcade games. Subclasses implement: stageOptions(), attract() (idle scene),
@@ -454,8 +520,48 @@ export class ArcadeBase extends GameBase {
 
   get lv() {
     const base = this.game.levels[this.level];
-    return this.embedded ? { ...base, ...this.embedded } : base;
+    const lv = this.embedded ? { ...base, ...this.embedded } : { ...base };
+    if (lv.song) {
+      lv.song = this.songId;
+      if (!this.embedded?.hands) lv.hands = this.songHand;
+    }
+    return lv;
   }
+
+  /** The hand to learn in song mode (picked in the intro; right if the song has no left-hand part). */
+  get songHand() {
+    if (this.embedded?.hands) return this.embedded.hands;
+    const want = this.app.store.data.gameHand?.[this.game.id] || 'R';
+    return want === 'L' && !this.songHasHand('L') ? 'R' : want;
+  }
+
+  songHasHand(hand) {
+    const def = this.songDef;
+    return !!def && !!String(hand === 'L' ? def.lh || '' : def.rh || '').replace(/[|\s]|r[whqes.]*/g, '').length;
+  }
+
+  /** True when the current level (or the embedded round) teaches a song. */
+  get songLevel() { return !!(this.embedded?.song || this.game.levels[this.level]?.song); }
+
+  /** Songs this game can teach (a game may narrow it, e.g. Ripchord needs a chord chart). */
+  songChoices() { return catalog.songs.filter((s) => this.songFilter?.(s) ?? true); }
+
+  /** The song for song mode: the embedded one, the one picked here, a recent one, or a familiar default. */
+  get songId() {
+    const ok = (s) => s && (this.songFilter?.(s) ?? true);
+    if (this._songId && ok(catalog.song(this._songId))) return this._songId;
+    const want = this.embedded?.song;
+    if (want && want !== 'auto' && ok(catalog.song(want))) return want;
+    const picked = this.app.store.data.gameSong?.[this.game.id];
+    if (!this.embedded && picked && ok(catalog.song(picked))) return picked;
+    const recent = recentSongs(this.app.store).find(ok);
+    if (recent) return recent.id;
+    return ['ode-to-joy', 'korobeiniki', 'hall-of-the-mountain-king', 'greensleeves'].find((id) => ok(catalog.song(id))) || this.songChoices()[0]?.id;
+  }
+
+  set songId(v) { this._songId = v; }
+
+  get songDef() { return catalog.song(this.songId); }
 
   stageOptions() { return { staves: this.lv.staves || 'treble' }; }
 
@@ -480,8 +586,26 @@ export class ArcadeBase extends GameBase {
       ...levels.map((l, i) => h('option', { value: i }, `${i + 1}. ${l.name}`)));
     sel.value = String(this.level);
     const best = this.app.store.game(this.game.id, this.level);
+    let songSel = null;
+    if (this.songLevel) {
+      const recent = recentSongs(this.app.store).filter((x) => this.songFilter?.(x) ?? true).slice(0, 6);
+      const all = this.songChoices().slice().sort((a, b) => a.title.localeCompare(b.title));
+      const opt = (x) => h('option', { value: x.id }, `${x.title} (level ${x.level})`);
+      songSel = h('select', { 'aria-label': 'Song', onchange: (e) => this._setSong(e.target.value) },
+        recent.length ? h('optgroup', { label: 'Your recent songs' }, ...recent.map(opt)) : null,
+        h('optgroup', { label: 'All songs' }, ...all.map(opt)));
+      songSel.value = this.songId;
+    }
+    let handSel = null;
+    if (this.songLevel && this.songHasHand('L') && this.game.songHands !== false) {
+      handSel = h('select', { 'aria-label': 'Hand', onchange: (e) => this._setHand(e.target.value) },
+        h('option', { value: 'R' }, 'Right hand'), h('option', { value: 'L' }, 'Left hand'));
+      handSel.value = this.songHand;
+    }
     ui.foot(
       h('label', { class: 'ar-level' }, h('span', {}, 'Level'), sel),
+      songSel ? h('label', { class: 'ar-level ar-song' }, h('span', {}, 'Song'), songSel) : null,
+      handSel ? h('label', { class: 'ar-level' }, h('span', { class: 'sr-only' }, 'Hand'), handSel) : null,
       h('button', { class: 'btn primary', 'data-enter': '', onclick: () => { this.app.sound.unlock(); this.begin(); } }, 'Start game'),
       best ? h('span', { class: 'note' }, `Your best: ${best.toLocaleString()}`) : null,
     );
@@ -499,13 +623,29 @@ export class ArcadeBase extends GameBase {
     this.intro();
   }
 
+  _setHand(hand) {
+    const d = this.app.store.data;
+    d.gameHand = { ...(d.gameHand || {}), [this.game.id]: hand };
+    this.app.store.save();
+    this.intro();
+  }
+
+  _setSong(id) {
+    const d = this.app.store.data;
+    d.gameSong = { ...(d.gameSong || {}), [this.game.id]: id };
+    this.app.store.save();
+    this.intro();
+  }
+
   _attractPanel() {
     const lv = this.game.levels[this.level];
+    const song = this.songLevel ? this.songDef : null;
     this.stage.showPanel(
       h('div', { class: 'ar-card' },
         h('p', { class: 'ar-eyebrow' }, `Level ${this.level + 1}: ${lv.name}`),
-        h('h2', { class: 'ar-title' }, this.game.title),
-        h('p', { class: 'ar-how' }, this.game.how || this.game.summary),
+        h('h2', { class: 'ar-title' }, song ? song.title : this.game.title),
+        song ? h('p', { class: 'ar-song-by' }, `${this.game.title} · ${song.composer}`) : null,
+        h('p', { class: 'ar-how' }, song ? (this.game.songHow || this.game.how || this.game.summary) : (this.game.how || this.game.summary)),
         h('h3', { class: 'ar-fame-h' }, 'Hall of Fame'),
         fameTable(this.app.store, this.game.id)));
   }
@@ -550,6 +690,7 @@ export class ArcadeBase extends GameBase {
     ui.foot(
       h('button', { class: 'btn primary', 'data-enter': '', onclick: () => this.begin() }, 'Play again'),
       h('button', { class: 'btn', onclick: () => { ui.prompt(this.game.summary); this.intro(); } }, 'Change level'),
+      this.songLevel ? h('a', { class: 'btn quiet', href: `#/songs/${this.songId}` }, `Open ${this.songDef?.title || 'the song'}`) : null,
     );
   }
 

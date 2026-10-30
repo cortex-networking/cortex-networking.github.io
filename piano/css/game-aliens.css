@@ -55,16 +55,18 @@
 .al-ring { fill: none; stroke: #a8f0c8; stroke-width: 1.5; }
 
 /* the phrase on the staff */
-.al-note .ar-glyph { fill: var(--chalk); }
-.al-note .al-stem { stroke: var(--chalk); }
-.al-note.lh .ar-glyph { fill: var(--lh); }
-.al-note.lh .al-stem { stroke: var(--lh); }
-.al-note.hit .ar-glyph { fill: var(--mint); }
-.al-note.hit .al-stem { stroke: var(--mint); }
+.al-note .ar-glyph, .al-note .al-dot { fill: var(--chalk); }
+.al-note .al-stem, .al-note .al-flag { stroke: var(--chalk); }
+.al-flag { fill: none; stroke-linecap: round; }
+.al-note.lh .ar-glyph, .al-note.lh .al-dot { fill: var(--lh); }
+.al-note.lh .al-stem, .al-note.lh .al-flag { stroke: var(--lh); }
+.al-note.hit .ar-glyph, .al-note.hit .al-dot { fill: var(--mint); }
+.al-note.hit .al-stem, .al-note.hit .al-flag { stroke: var(--mint); }
 .al-note.hit .ar-ledger { stroke: var(--mint); }
 .al-note.dim { opacity: 0.26; }
-.al-note.late .ar-glyph { fill: var(--brass); }
-.al-note.late .al-stem { stroke: var(--brass); }
+.al-note.late .ar-glyph, .al-note.late .al-dot { fill: var(--brass); }
+.al-note.late .al-stem, .al-note.late .al-flag { stroke: var(--brass); }
+.al-barline { stroke: var(--chalk-2); stroke-width: 1.2; opacity: 0.7; }
 .al-ghost .ar-glyph { fill: var(--coral); }
 .al-ghost .ar-ledger { stroke: var(--coral); }
 .al-ghost-label { font-family: var(--sans); font-weight: 600; fill: var(--coral); paint-order: stroke; stroke: var(--felt); stroke-width: 3px; }
@@ -80,6 +82,11 @@
 .al-pip { fill: none; stroke: var(--chalk-2); stroke-width: 1.5; }
 .al-pip.cur { fill: var(--brass); stroke: var(--brass); }
 .al-pip.done { fill: var(--mint); stroke: var(--mint); }
+/* song progress: one segment per bar */
+.al-seg { fill: rgba(232, 237, 227, 0.16); }
+.al-seg.done { fill: var(--mint); }
+.al-seg.rest { fill: rgba(232, 237, 227, 0.06); }
+.al-seg.cur { fill: var(--brass); }
 
 /* the aliens (unit coordinates) */
 .al-alien-ant { fill: none; stroke-width: 0.09; stroke-linecap: round; }

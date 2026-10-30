@@ -6,11 +6,12 @@ import { Staff } from './staff.js';
 import { h, stars } from './ui.js';
 import { Store, INTERESTS } from './store.js';
 import { Coach } from './coach.js';
-import { catalog, COLLECTIONS } from './catalog.js';
+import { catalog, COLLECTIONS, FEATURED } from './catalog.js';
 import { LessonMode, PracticeMode, lessonUnlocked, resolveRef } from './lesson.js';
 import { SongMode } from './songmode.js';
 import { HomeMode, ProgressMode, nextLesson, showCertificate } from './home.js';
 import { FreeMode } from './modes.js';
+import { JukeboxMode } from './jukebox.js';
 
 const $ = (s) => document.querySelector(s);
 const TABS = ['learn', 'songs', 'games', 'free'];
@@ -187,6 +188,9 @@ class App {
     } else if (t === 'progress') {
       this.current = 'progress';
       ctrl = new ProgressMode(this);
+    } else if (t === 'songs' && id === 'jukebox') {
+      this.current = 'jukebox';
+      ctrl = new JukeboxMode(this);
     } else if (t === 'songs') {
       const song = (id && catalog.song(id)) || this._defaultSong();
       this.current = song.id;
@@ -272,6 +276,11 @@ class App {
         const q = (this.songQuery || '').toLowerCase();
         const match = (s) => !q || `${s.title} ${s.composer} ${(s.tags || []).join(' ')}`.toLowerCase().includes(q);
         const placed = new Set();
+        const featured = FEATURED.map((id) => catalog.song(id)).filter((x) => x && match(x));
+        if (featured.length && !q) {
+          body.append(h('section', { class: 'group' }, h('h2', {}, 'Featured'),
+            ...featured.map((s) => item('songs', s.id, s.title, `${s.composer}, level ${s.level}`, this.store.song(s.id) ? stars(this.store.song(s.id).stars) : null))));
+        }
         const interests = this.store.profile?.interests || [];
         const order = [...COLLECTIONS].sort((a, b) => (interests.includes(b.id) ? 1 : 0) - (interests.includes(a.id) ? 1 : 0));
         for (const col of order) {
@@ -289,7 +298,8 @@ class App {
         if (!body.childNodes.length) body.append(h('p', { class: 'list-note' }, 'No songs match that.'));
       };
       search.addEventListener('input', () => { this.songQuery = search.value; draw(); });
-      list.append(search, body);
+      const juke = h('div', { class: 'list-top' }, item('songs', 'jukebox', 'Jukebox', 'Sit back: every song with the full band, one after another.'));
+      list.append(juke, search, body);
       draw();
     } else if (this.tab === 'games') {
       const arcadeIds = Object.keys(this.extras.arcade?.ARCADE_CLASSES || {});

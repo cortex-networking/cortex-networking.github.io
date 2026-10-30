@@ -1,7 +1,5 @@
 // Classical and epic song collection. All pieces are public domain (published before 1929 or
 // traditional); arrangements are original and simplified. Voice syntax: see parseVoice() in theory.js.
-// Pieces in G minor, C minor and B minor use the relative major as `key` (Bb, Eb, D) because the
-// staff only knows those key signatures; the notes are unchanged.
 
 const rep = (tok, n) => Array(n).fill(tok).join(' ');
 const repBars = (bar, n) => Array(n).fill(bar).join(' | ');

@@ -4,6 +4,7 @@ import { CHAPTERS, LESSONS } from './curriculum.js';
 import { SONGS_ROCK } from './songs-rock.js';
 import { SONGS_FOLK } from './songs-folk.js';
 import { SONGS_CLASSICAL } from './songs-classical.js';
+import { SONGS_EPIC } from './songs-epic.js';
 
 /** Later collections replace earlier entries with the same id (they carry chords, tags and blurbs). */
 function mergeSongs(...lists) {
@@ -12,7 +13,7 @@ function mergeSongs(...lists) {
   return [...byId.values()];
 }
 
-let songs = mergeSongs(OLD_SONGS.map((s) => ({ tags: ['starter'], style: 'folk', ...s })), SONGS_FOLK, SONGS_CLASSICAL, SONGS_ROCK);
+let songs = mergeSongs(OLD_SONGS.map((s) => ({ tags: ['starter'], style: 'folk', ...s })), SONGS_FOLK, SONGS_CLASSICAL, SONGS_EPIC, SONGS_ROCK);
 let chapters = CHAPTERS;
 let lessons = [];
 let games = [];
@@ -55,8 +56,11 @@ export const catalog = {
   },
 };
 
+/** The shelf at the top of the Songs list: the most recognisable epic and game pieces. */
+export const FEATURED = ['mars', 'night-on-bald-mountain', 'hall-of-the-mountain-king', 'verdi-dies-irae', 'beethoven-7-allegretto',
+  'korobeiniki', 'ride-of-the-valkyries', 'zarathustra', 'queen-mary-march', 'danse-macabre', 'william-tell-finale', 'toccata-d-minor'];
+
 export const COLLECTIONS = [
-  { id: 'starter', title: 'First tunes' },
   { id: 'epic', title: 'Epic and dark' },
   { id: 'classical', title: 'Classical favorites' },
   { id: 'folk', title: 'Folk songs' },
@@ -65,4 +69,5 @@ export const COLLECTIONS = [
   { id: 'games', title: 'Game and film favorites' },
   { id: 'blues', title: 'Blues, ragtime and rock' },
   { id: 'holiday', title: 'Holiday' },
+  { id: 'starter', title: 'First tunes' },
 ];

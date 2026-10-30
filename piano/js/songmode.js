@@ -4,6 +4,45 @@ import { Session } from './session.js';
 import { h, segmented, stars, toggle } from './ui.js';
 import { gradeText } from './lesson.js';
 
+/**
+ * "Learn it with games": a routine that teaches one song through the arcade games, then has you
+ * play it for real. Roboman (rhythm) → Ducks (notes in order) → Aliens! (phrase by phrase, with
+ * fingers) → left-hand notes → Ripchord (its chords) → wait mode → play along with the band.
+ */
+export function songPath(app, song) {
+  const score = buildScore(song);
+  const hasL = !!score.hands.L && !!score.hands.R;
+  const distinct = new Set(String(song.chords || '').split(/[|\s]+/).map((t) => t.split(':')[0]).filter((t) => t && !/^n\.?c\.?$/i.test(t)));
+  const id = song.id;
+  const plan = [
+    { type: 'game', game: 'roboman', params: { song: id, hands: 'R' }, pass: 0.6, text: `The rhythm of the right hand. Roboman rolls through ${song.title}: tap the short notes, hold the long ones.` },
+    { type: 'game', game: 'ducks', params: { song: id, hands: 'R' }, pass: 0.75, text: `Read the notes. The ducks swim the melody of ${song.title} in order; play each one.` },
+    { type: 'game', game: 'aliens', params: { song: id, hands: 'R' }, pass: 0.6, text: 'Learn it phrase by phrase. The aliens play each phrase with its fingering; copy it, then play the phrases joined together.' },
+  ];
+  if (hasL) plan.push({ type: 'game', game: 'ducks', params: { song: id, hands: 'L' }, pass: 0.75, text: 'Now read the left hand’s notes the same way.' });
+  if (distinct.size >= 2) plan.push({ type: 'game', game: 'ripchord', params: { song: id, hands: 'R' }, pass: 0.6, text: `The chords of ${song.title}, in order. Hold each one before the timer runs out.` });
+  plan.push({ type: 'song', song: id, mode: 'wait', hands: 'R', text: 'The real thing: the right hand at your own pace, with the left hand played for you.' });
+  if (hasL) plan.push({ type: 'song', song: id, mode: 'wait', hands: 'B', text: 'Both hands together, at your own pace.' });
+  plan.push({ type: 'song', song: id, mode: 'play', hands: 'R', tempo: 0.8, pass: 0.6, text: 'Last step: play along with the band, a little slower than full speed.' });
+  const n = plan.length;
+  const steps = plan.map((st, i) => ({ ...st, text: `Step ${i + 1} of ${n}: ${st.text}` }));
+  const saved = app.store.data.songPaths?.[id] || {};
+  const save = (patch) => {
+    const d = app.store.data;
+    d.songPaths = { ...(d.songPaths || {}), [id]: { ...(d.songPaths?.[id] || {}), ...patch, at: Date.now() } };
+    app.store.save();
+  };
+  return {
+    title: song.title, kicker: 'Learn it with games', steps,
+    intro: `${n} steps that teach ${song.title}: its rhythm, its notes, its phrases${hasL ? ', the left hand' : ''}${distinct.size >= 2 ? ', its chords' : ''}, and then the real thing with the band.`,
+    startLabel: 'Start learning', startAt: saved.done ? 0 : (saved.step || 0),
+    onProgress: (i) => save({ step: i }),
+    onDone: (avg) => save({ done: true, step: 0, best: Math.max(avg, saved.best || 0) }),
+    doneKicker: 'Song learned', doneText: (avg) => (avg >= 0.8 ? `That’s ${song.title}, start to finish. Play along again any time to polish it.` : `You worked through all of ${song.title}. Go back to any step that felt shaky, then play along again.`),
+    back: { label: `Back to ${song.title}`, href: `#/songs/${id}` }, againLabel: 'Go through it again',
+  };
+}
+
 export class SongMode {
   constructor(app, song) {
     this.app = app;
@@ -105,12 +144,16 @@ export class SongMode {
         }), tempoLabel),
       o.mode === 'play' || o.mode === 'tap' ? toggle('Metronome', o.metronome, (v) => set('metronome', v)) : null,
     ];
-    const [first, mode, ...more] = controls.filter(Boolean);
+    const path = this.app.store.data.songPaths?.[this.song.id];
+    const learn = h('button', { class: 'btn', onclick: () => { this.session?.stop(true); this.app.practice(songPath(this.app, this.song)); } },
+      path?.done ? 'Learn with games ✓' : path?.step ? `Learn with games (step ${path.step + 1})` : 'Learn it with games');
+    controls.splice(1, 0, learn);
+    const [first, learnBtn, mode, ...more] = controls.filter(Boolean);
     const wide = window.matchMedia('(min-width: 861px)').matches;
     if (this._optsOpen === undefined) this._optsOpen = wide;
     const details = h('details', { class: 'more', open: this._optsOpen ? true : null, ontoggle: (e) => { this._optsOpen = e.target.open; } },
       h('summary', {}, 'Options'), h('div', { class: 'controls' }, ...more));
-    ui.foot(h('div', { class: 'controls' }, first, mode, more.length ? details : null), extra || null);
+    ui.foot(h('div', { class: 'controls' }, first, learnBtn, mode, more.length ? details : null), extra || null);
   }
 
   play() {

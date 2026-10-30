@@ -114,7 +114,9 @@ export class HomeMode {
         h('h2', {}, s.title),
         h('p', { class: 'small' }, `${s.composer}, level ${s.level}`),
         s.blurb ? h('p', {}, s.blurb) : null,
-        h('button', { class: 'btn', onclick: () => this.app.open('songs', s.id) }, 'Learn this song'),
+        h('div', { class: 'card-actions' },
+          h('button', { class: 'btn primary', onclick: () => import('./songmode.js').then((m) => this.app.practice(m.songPath(this.app, s))) }, 'Learn it with games'),
+          h('button', { class: 'btn', onclick: () => this.app.open('songs', s.id) }, 'Open the song')),
       ));
     }
     const today = store.practiceDays(1)[0].seconds;

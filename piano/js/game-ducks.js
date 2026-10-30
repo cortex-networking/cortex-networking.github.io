@@ -1,8 +1,10 @@
 // Ducks: the Miracle's shooting gallery. Ducks swim right to left along the lines and spaces of the
 // staff; play the note the leftmost duck sits on to hit it with a paint bomb. A miss splats paint
 // on the staff where the note you played lives, so you can see how far off you were.
-import { ArcadeBase, svg, rand, pick, ease, clamp, PAINT } from './arcade.js';
-import { noteName } from './theory.js';
+// Song mode ("Read a song"): the ducks swim a real song's melody in order, spaced like the music,
+// with bar posts between bars, so a round is a read-through of that song.
+import { ArcadeBase, svg, rand, pick, ease, clamp, PAINT, melodyOf } from './arcade.js';
+import { noteName, buildScore } from './theory.js';
 import { h } from './ui.js';
 
 const whites = (lo, hi) => { const out = []; for (let m = lo; m <= hi; m++) if (![1, 3, 6, 8, 10].includes(m % 12)) out.push(m); return out; };
@@ -22,7 +24,9 @@ export const GAME = {
     { name: 'Both staves', staves: 'grand', pool: whites(43, 79), throws: 2, speed: 1.15, count: 24 },
     { name: 'Ledger lines', staves: 'treble', pool: [55, 57, 59, 60, 79, 81, 83, 84], throws: 2, speed: 1.05, count: 20 },
     { name: 'Sharps and flats', staves: 'treble', pool: range(60, 72), accidentals: true, throws: 2, speed: 1.05, count: 20 },
+    { name: 'Read a song', song: true, throws: 3, speed: 0.9 },
   ],
+  songHow: 'The ducks swim the song’s melody in order, spaced like the music, with a post at every bar line. Play each duck’s note to hit it. By the last duck you have read the whole tune.',
 };
 
 const BODY = { brass: ['#d9a93a', '#b4861f'], chalk: ['#e8ede3', '#b9c7bd'], mint: ['#7fd3a6', '#4ea77a'] };
@@ -30,13 +34,38 @@ const BODY = { brass: ['#d9a93a', '#b4861f'], chalk: ['#e8ede3', '#b9c7bd'], min
 export class Game extends ArcadeBase {
   stageOptions() {
     const lv = this.lv;
-    return { staves: lv.staves || 'treble', mTop: 3.2, mBot: 3, padTop: 0.13, padBot: 0.2, maxSp: 26 };
+    const base = { mTop: 3.2, mBot: 3, padTop: 0.13, padBot: 0.2, maxSp: 26 };
+    if (this.songLevel) {
+      const m = this._songMaterial();
+      if (m) return { ...base, staves: m.staves, key: m.key };
+    }
+    return { ...base, staves: lv.staves || 'treble', key: 'C' };
+  }
+
+  /** The melody to read on the song level: { title, seq, key, staves, hand, bars }. Cached per song and hand. */
+  _songMaterial() {
+    const lv = this.lv;
+    const def = this.songDef;
+    if (!def) return null;
+    const hand = lv.hands === 'L' ? 'L' : 'R';
+    const k = `${def.id}|${hand}|${lv.fromBar ?? ''}|${lv.toBar ?? ''}`;
+    if (this._mat?.k === k) return this._mat;
+    const score = buildScore(def);
+    const seq = melodyOf(score, hand, { fromBar: lv.fromBar ?? 0, toBar: lv.toBar ?? Infinity });
+    if (!seq.length) return null;
+    const lo = Math.min(...seq.map((n) => n.midi)), hi = Math.max(...seq.map((n) => n.midi));
+    const staves = hand === 'R' ? (lo < 55 ? 'grand' : 'treble') : (hi > 65 ? 'grand' : 'bass');
+    const bars = [seq[0].bar, seq[seq.length - 1].bar];
+    this._mat = { k, title: def.title, seq, key: score.key, staves, hand, bars, lastBar: score.barlines.length };
+    return this._mat;
   }
 
   reset() {
     for (const d of this.ducks || []) d.g.remove();
     this.ducks = [];
     this.bombs = [];
+    this.posts = [];
+    this._lastNoteBar = undefined;
     this.target = null;
     this.stage.layers.hud.textContent = '';
     this.stage.layers.back.textContent = '';
@@ -48,6 +77,7 @@ export class Game extends ArcadeBase {
     if (!this.ducks) return;
     this._scenery();
     for (const d of this.ducks) this._placeDuck(d, true);
+    for (const p of this.posts || []) this._placePost(p, true);
     this._ammo();
     this._hud();
   }
@@ -88,13 +118,20 @@ export class Game extends ArcadeBase {
 
   _spawn(attract = false) {
     const lv = this.lv;
-    let m;
+    let m, prefer, note = null;
     const last = this.ducks[this.ducks.length - 1];
-    do { m = pick(lv.pool); } while (lv.pool.length > 2 && last && m === last.midi);
-    const black = [1, 3, 6, 8, 10].includes(m % 12);
+    const mat = this.songLevel ? this._songMaterial() : null;
+    if (mat) {
+      note = mat.seq[attract ? (this.ducks.length % mat.seq.length) : this.spawned] || mat.seq[mat.seq.length - 1];
+      m = note.midi; prefer = note.prefer;
+    } else {
+      do { m = pick(lv.pool); } while (lv.pool.length > 2 && last && m === last.midi);
+      const black = [1, 3, 6, 8, 10].includes(m % 12);
+      prefer = black ? (Math.random() < 0.5 ? 'flat' : 'sharp') : undefined;
+    }
     const d = {
-      id: Math.random().toString(36).slice(2, 7), midi: m,
-      prefer: black ? (Math.random() < 0.5 ? 'flat' : 'sharp') : undefined,
+      id: Math.random().toString(36).slice(2, 7), midi: m, note,
+      prefer,
       s: attract ? rand(2, this._span()) : this._span() + 2.4,
       throws: lv.throws || 3, used: 0, state: 'swim', phase: rand(0, 6.28),
       color: Math.random() < 0.72 ? 'brass' : Math.random() < 0.6 ? 'chalk' : 'mint',
@@ -150,21 +187,80 @@ export class Game extends ArcadeBase {
     this.playing = true;
     this.score = 0; this.streak = 0; this.bestStreak = 0;
     this.spawned = 0; this.hits = 0; this.firstHits = 0; this.lost = 0;
-    this.total = lv.count || 20;
     this.sinceSpawn = 99; this.firstDelay = 0.6; this.endTimer = null;
-    // open with a few ducks already paddling in, so there is always one to read ahead
+    this.posts = [];
+    this.barMiss = new Map();
     const span = this._span();
-    for (const f of [0.62, 0.84, 1.04]) { const d = this._spawn(); d.s = span * f; this._placeDuck(d); this.spawned++; }
+    const mat = this.songLevel ? this._songMaterial() : null;
+    this.song = mat;
+    if (mat) {
+      // the melody in order, spaced by rhythm, entering from the right half of the pond
+      this.total = mat.seq.length;
+      let s = span * 0.55;
+      while (this.spawned < this.total && s < span + 2.4) {
+        const d = this._spawn(); d.s = s + this._accRoom(d); this._placeDuck(d);
+        this._maybePost(d);
+        this.spawned++;
+        s = d.s + this._gapAfter(d);
+      }
+      const ms = mat.seq.map((n) => n.midi);
+      this.app.keyboard.need(Math.min(...ms), Math.max(...ms));
+      this.app.ui.prompt(this.embedded?.text || `${mat.title}, ${mat.hand === 'L' ? 'left' : 'right'} hand: the ducks swim the melody in order. Play each duck’s note to hit it.`);
+    } else {
+      this.total = lv.count || 20;
+      // open with a few ducks already paddling in, so there is always one to read ahead
+      for (const f of [0.62, 0.84, 1.04]) { const d = this._spawn(); d.s = span * f; this._placeDuck(d); this.spawned++; }
+      this.app.keyboard.need(Math.min(...lv.pool), Math.max(...lv.pool));
+      this.app.ui.prompt(this.embedded?.text || 'Play the note the leftmost duck is swimming on. A miss shows you where your note lives.');
+    }
     this.firstDelay = 0;
     this.sinceSpawn = 0;
-    this.app.keyboard.need(Math.min(...lv.pool), Math.max(...lv.pool));
-    this.app.ui.prompt(this.embedded?.text || 'Play the note the leftmost duck is swimming on. A miss shows you where your note lives.');
     this.app.ui.foot(h('button', { class: 'btn', onclick: () => this._end(true) }, 'Stop'));
     this._ammo();
     this._hud();
   }
 
-  get speed() { return clamp((2.1 + 0.07 * this.spawned) * (this.lv.speed || 1), 1.4, 5.6); }
+  get speed() {
+    if (this.song) {
+      // steady, and the pond slows right down while the next duck waits near the clef
+      // the pond keeps the next duck about a third of the way in: it hurries when you're ahead
+      // and slows right down while a duck waits near the clef
+      const t = this.target;
+      const ease = t ? clamp((t.s - 0.6) / (this._span() * 0.3), 0.18, 3.2) : 3;
+      return 2.1 * (this.lv.speed || 1) * ease;
+    }
+    return clamp((2.1 + 0.07 * this.spawned) * (this.lv.speed || 1), 1.4, 5.6);
+  }
+
+  /** Space after a duck in song mode, from its note value (like notation spacing). */
+  _gapAfter(d) { return clamp((d.note?.d ?? 1) * 3.1, 3.6, 7.5); }
+
+  /** Extra room in front of a duck that carries an accidental. */
+  _accRoom(d) { return d.note && this.stage.place(d.midi, d.prefer).acc != null ? 1.2 : 0; }
+
+  /** A bar post just before the first duck of each bar (song mode). */
+  _maybePost(d) {
+    if (!this.song || !d.note) return;
+    const prev = this._lastNoteBar;
+    this._lastNoteBar = d.note.bar;
+    if (prev === undefined || d.note.bar === prev) return;
+    const st = this.stage, sp = st.sp;
+    const g = svg('g', { class: 'duck-post' }, st.layers.back);
+    const post = { s: d.s - 1.9, bar: d.note.bar, g };
+    this.posts.push(post);
+    this._placePost(post, true);
+  }
+
+  _placePost(p, full = false) {
+    const st = this.stage, sp = st.sp;
+    if (full) {
+      p.g.textContent = '';
+      svg('line', { x1: 0, x2: 0, y1: st.staffTop, y2: st.staffBottom, class: 'duck-post-line' }, p.g);
+      const t = svg('text', { x: 0, y: st.staffTop - 0.9 * sp, 'text-anchor': 'middle', 'font-size': clamp(0.95 * sp, 10, 15), class: 'duck-post-num' }, p.g);
+      t.textContent = String(p.bar + 1);
+    }
+    p.g.setAttribute('transform', `translate(${(st.noteLeft + p.s * sp).toFixed(1)} 0)`);
+  }
 
   step(dt) {
     if (!this.ducks) return;
@@ -182,15 +278,31 @@ export class Game extends ArcadeBase {
     this.sinceSpawn += dt;
     this.firstDelay -= dt;
     const swimming = this.ducks.filter((d) => d.state === 'swim');
-    const gap = 6.4 / this.speed;
-    const lastS = this.ducks.length ? Math.max(...this.ducks.map((d) => d.s)) : -99;
-    const roomy = lastS < this._span() - 1.5;
-    if (this.firstDelay <= 0 && this.spawned < this.total && (this.sinceSpawn >= gap || (swimming.length < 2 && roomy))) {
-      this._spawn(); this.spawned++; this.sinceSpawn = 0; this._hud();
+    const speed = this.speed;
+    if (this.song) {
+      // keep the melody coming at its own spacing behind the last duck
+      const last = this.ducks[this.ducks.length - 1];
+      const edge = this._span() + 2.4;
+      if (this.spawned < this.total && (!last || last.s + this._gapAfter(last) <= edge)) {
+        const d = this._spawn();
+        d.s = (last ? Math.max(last.s + this._gapAfter(last), 0.6) : edge) + this._accRoom(d);
+        this._placeDuck(d);
+        this._maybePost(d);
+        this.spawned++; this._hud();
+      }
+      for (const p of this.posts) { p.s -= speed * dt; this._placePost(p); }
+      this.posts = this.posts.filter((p) => (p.s > -2 ? true : (p.g.remove(), false)));
+    } else {
+      const gap = 6.4 / speed;
+      const lastS = this.ducks.length ? Math.max(...this.ducks.map((d) => d.s)) : -99;
+      const roomy = lastS < this._span() - 1.5;
+      if (this.firstDelay <= 0 && this.spawned < this.total && (this.sinceSpawn >= gap || (swimming.length < 2 && roomy))) {
+        this._spawn(); this.spawned++; this.sinceSpawn = 0; this._hud();
+      }
     }
     for (const d of this.ducks) {
       if (d.state === 'swim') {
-        d.s -= this.speed * dt;
+        d.s -= speed * dt;
         d.phase += dt * 3;
         if (d.s < -0.4) this._escape(d, 'swam off');
       }
@@ -240,7 +352,8 @@ export class Game extends ArcadeBase {
     } else {
       d.throws--;
       this.streak = 0;
-      this.app.coach.record('wrong-pitch', { expected: d.midi, played: e.midi, key: 'C' });
+      this.app.coach.record('wrong-pitch', { expected: d.midi, played: e.midi, key: this.stage.opts.key || 'C' });
+      if (d.note) this.barMiss.set(d.note.bar, (this.barMiss.get(d.note.bar) || 0) + 1);
       this.app.keyboard.flash(e.midi, 'miss', 450);
       const p = this.stage.place(e.midi, d.prefer && e.midi % 12 === d.midi % 12 ? d.prefer : undefined);
       this._throw(d.x, p.y, color, () => {
@@ -287,6 +400,7 @@ export class Game extends ArcadeBase {
     this.lost++;
     this.streak = 0;
     if (this.mode === 'play' && why === 'swam off') this.app.coach.record('missed', { expected: d.midi });
+    if (this.mode === 'play' && d.note) this.barMiss.set(d.note.bar, (this.barMiss.get(d.note.bar) || 0) + 2);
     this.sfx.laugh();
     const st = this.stage, sp = st.sp;
     const x0 = d.x;
@@ -335,7 +449,10 @@ export class Game extends ArcadeBase {
     };
     label(st.left + sp, 'start', 'SCORE', this.score.toLocaleString());
     const remaining = this.total - this.spawned + this.ducks.filter((d) => d.state === 'swim' || d.state === 'leaving').length;
-    label(st.right - sp, 'end', 'DUCKS', `${this.hits} hit · ${remaining} to go`);
+    if (this.song) {
+      const bar = this.target?.note ? this.target.note.bar + 1 : (this.song.bars[1] + 1);
+      label(st.right - sp, 'end', 'BAR', `${bar} of ${this.song.bars[1] + 1}`);
+    } else label(st.right - sp, 'end', 'DUCKS', `${this.hits} hit · ${remaining} to go`);
     this.app.ui.status(this.streak > 2 ? `${this.streak} in a row` : '');
   }
 
@@ -348,6 +465,26 @@ export class Game extends ArcadeBase {
     this._ammo(); this.hudG && (this.hudG.textContent = '');
     if (this.cross) this.cross.setAttribute('opacity', 0);
     if (!stopped && acc >= 0.9) this.sfx.fanfare();
+    if (this.song) {
+      const m = this.song;
+      const worst = [...this.barMiss.entries()].sort((a, b) => b[1] - a[1])[0];
+      const range = `bars ${m.bars[0] + 1}–${m.bars[1] + 1}`;
+      this.finish({
+        score: this.score,
+        accuracy: acc,
+        passed: acc >= (this.embedded?.pass ?? 0.7),
+        detail: stopped
+          ? `Stopped. ${this.hits} notes of ${m.title} read so far.`
+          : `You read ${m.title} (${m.hand === 'L' ? 'left' : 'right'} hand, ${range}): ${this.hits} of ${total} notes${this.firstHits ? `, ${this.firstHits} on the first throw` : ''}.${worst && worst[1] >= 2 ? ` Bar ${worst[0] + 1} needed the most help.` : ''}`,
+        stats: [
+          ['Song', m.title],
+          ['Notes read', `${this.hits} of ${total}`],
+          ['First-throw hits', String(this.firstHits)],
+          ['Trickiest bar', worst && worst[1] >= 2 ? String(worst[0] + 1) : 'none'],
+        ],
+      });
+      return;
+    }
     this.finish({
       score: this.score,
       accuracy: acc,

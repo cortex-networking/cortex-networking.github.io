@@ -1,11 +1,14 @@
 // Aliens!: the Miracle's memory game. A flying saucer beams a short phrase onto the staff, note by
 // note, while the aliens play it; the lit window in its hull shows which finger plays each note.
-// Then you copy the phrase three times with less help each time: the red triangle, the lit key and
-// the finger first; then the triangle and the finger; then from memory before the red bar on the
-// right of the staff drains. Get most of the notes right first time and the aliens come out to
-// celebrate.
-import { ArcadeBase, GLYPH, svg, rand, pick, ease, clamp } from './arcade.js';
-import { noteName, spell, isBlack } from './theory.js';
+// Then you copy the phrase with less help each time: the red triangle, the lit key and the finger
+// first; then the triangle and the finger; then from memory before the red bar on the right of the
+// staff drains. Get most of the notes right first time and the aliens come out to celebrate.
+//
+// Song mode ("Learn a song") teaches a real song from the catalog this way, phrase by phrase, with
+// chaining: each new phrase is shown and copied (guided, then from memory), then joined to the
+// phrases before it and played from memory, so the song is learned in growing chunks.
+import { ArcadeBase, GLYPH, svg, rand, pick, ease, clamp, phrasesOf } from './arcade.js';
+import { noteName, spell, isBlack, buildScore, keySigMap } from './theory.js';
 import { h } from './ui.js';
 
 // Five-finger positions, lowest note first (index = degree). Right-hand finger = degree + 1 (thumb
@@ -59,20 +62,27 @@ export const GAME = {
   id: 'aliens', title: 'Aliens!',
   summary: 'The memory game. The aliens play a short phrase; copy it with the right fingers, with less help each time.',
   how: 'The aliens beam a phrase onto the staff, and the lit window on their saucer shows the finger for each note. Copy it three times with less help each time, the last from memory before the red bar runs out. Get most notes right for a surprise.',
+  songHow: 'The aliens teach the song phrase by phrase: copy each one with help, then from memory, then joined to the phrase before, until you have played the whole song.',
   skill: 'fingering',
   levels: [
-    { name: 'Right hand, C position', staves: 'treble', hands: { R: POS.cR }, bank: 'steps' },
-    { name: 'Left hand, C position', staves: 'bass', hands: { L: POS.cL }, bank: 'steps' },
-    { name: 'Right hand, G position', staves: 'treble', hands: { R: POS.gR }, bank: 'steps' },
-    { name: 'Middle C position', staves: 'grand', hands: { L: POS.mcL, R: POS.cR }, bank: 'middleC' },
-    { name: 'Steps and skips', staves: 'treble', hands: { R: POS.cR }, bank: 'skips' },
-    { name: 'A minor position', staves: 'treble', hands: { R: POS.aR }, bank: 'mixed' },
-    { name: 'Hands take turns', staves: 'grand', hands: { L: POS.cL, R: POS.cR }, bank: 'turns' },
+    { name: 'Right hand, C position', staves: 'treble', pos: { R: POS.cR }, bank: 'steps' },
+    { name: 'Left hand, C position', staves: 'bass', pos: { L: POS.cL }, bank: 'steps' },
+    { name: 'Right hand, G position', staves: 'treble', pos: { R: POS.gR }, bank: 'steps' },
+    { name: 'Middle C position', staves: 'grand', pos: { L: POS.mcL, R: POS.cR }, bank: 'middleC' },
+    { name: 'Steps and skips', staves: 'treble', pos: { R: POS.cR }, bank: 'skips' },
+    { name: 'A minor position', staves: 'treble', pos: { R: POS.aR }, bank: 'mixed' },
+    { name: 'Hands take turns', staves: 'grand', pos: { L: POS.cL, R: POS.cR }, bank: 'turns' },
+    { name: 'Learn a song', song: true },
   ],
 };
 
 /*
  * Embedded params (lessons and the coach): new Game(app, GAME, { embedded: { ... } })
+ * Song mode:
+ *   song      catalog id of the song to teach (turns on song mode; the kit resolves 'auto')
+ *   hands     'R' | 'L' (default 'R'): which hand's line to learn
+ *   fromBar, toBar  optional bar range, inclusive, 0-based as songBar counts them
+ * Made-up phrases:
  *   phrases   array of phrases, each an array of MIDI numbers or { midi, finger, hand: 'L'|'R' }.
  *             Missing fingers come from the five-finger position: the lowest note of each hand is
  *             the right thumb (1) or the left pinky (5). Phrases spanning more than five white keys
@@ -81,10 +91,11 @@ export const GAME = {
  *   staves    'treble' | 'bass' | 'grand' (default: from the hands used)
  *   reps      copies after the demo (default 3; the last one is from memory, against the clock)
  *   count     phrases to play (default: every given phrase, or 3 from the level's bank)
- *   pass      share of notes right first time needed to pass (default 0.7)
- *   surprise  share needed in one phrase for the aliens' surprise (default 0.8)
  *   tempo     seconds per note in the aliens' demo (default 0.85)
- *   time      seconds for the memory repetition (default 2.5 + 1.3 per note)
+ * Both:
+ *   pass      share of notes right first time needed to pass (default 0.7)
+ *   surprise  share needed in one phrase or join for the aliens' surprise (default 0.8)
+ *   time      seconds for each memory copy (default 2.5 + 1.3 per note)
  *   text      prompt shown above the board
  */
 
@@ -95,25 +106,42 @@ const MOUTH = {
   frown: 'M-0.15,-0.66 Q0,-0.79 0.15,-0.66',
   open: 'M-0.15,-0.74 Q0,-0.48 0.15,-0.74 Q0,-0.68 -0.15,-0.74 Z',
 };
+const JOIN_MAX = 12;   // notes in a joined chunk before the chain slides on instead of growing
 const shuffle = (arr) => { const a = [...arr]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
 export class Game extends ArcadeBase {
   stageOptions() {
     const staves = this._staves();
+    this.topExtra = 0;
+    if (this.songLevel && this._song()) {
+      // room above and below the staff for the song's highest and lowest notes
+      const s = this._song(), ext = this._extent(s.line, s.score.key, staves);
+      this.topExtra = ext.up;
+      return { staves, key: s.score.key, mTop: 7 + ext.up, mBot: Math.max(3.4, ext.down + 2.3), padTop: 0.04, padBot: 0.2, maxSp: 22 };
+    }
     // headroom above the staff for the saucer; the grand staff trades a little of it for bigger notes
     return staves === 'grand'
-      ? { staves, mTop: 5.5, mBot: 2.6, padTop: 0.04, padBot: 0.17, maxSp: 22 }
-      : { staves, mTop: 7, mBot: 3.4, padTop: 0.04, padBot: 0.2, maxSp: 22 };
+      ? { staves, key: 'C', mTop: 5.5, mBot: 2.6, padTop: 0.04, padBot: 0.17, maxSp: 22 }
+      : { staves, key: 'C', mTop: 7, mBot: 3.4, padTop: 0.04, padBot: 0.2, maxSp: 22 };
   }
 
   _staves() {
     const lv = this.lv;
+    if (this.songLevel) return lv.hands === 'L' ? 'bass' : 'treble';
     if (this.embedded?.staves) return this.embedded.staves;
     if (lv.phrases?.length) {
       const hands = new Set(lv.phrases.flatMap((p) => this._spec(p).map((n) => n.hand)));
       return hands.size > 1 ? 'grand' : hands.has('L') ? 'bass' : 'treble';
     }
     return lv.staves || 'treble';
+  }
+
+  /** Space a list of notes needs above and below the staff, in staff spaces. */
+  _extent(notes, key, staves = this.stage.opts.staves) {
+    if (!notes.length) return { up: 0, down: 0 };
+    const steps = notes.map((n) => spell(n.midi, key, n.prefer).step);
+    const top = staves === 'bass' ? 26 : 38, bot = staves === 'bass' ? 18 : 30;
+    return { up: Math.max(0, (Math.max(...steps) - top) / 2 + 0.7), down: Math.max(0, (bot - Math.min(...steps)) / 2 + 0.7) };
   }
 
   reset() {
@@ -124,8 +152,11 @@ export class Game extends ArcadeBase {
     this.decor = [];
     this.aliens = [];
     this.phase = 'idle';
+    this.view = 0; this.viewTo = 0; this.gap = 0; this.cap = 0; this.x0 = 0;
+    this.chunkUp = this.topExtra || 0;
     for (const k of ['hud', 'back', 'sprites', 'fx']) st.layers[k].textContent = '';
-    this.noteG = svg('g', { class: 'al-notes' }, st.layers.sprites);
+    this.noteWrap = svg('g', { class: 'al-notewrap' }, st.layers.sprites);
+    this.noteG = svg('g', { class: 'al-notes' }, this.noteWrap);
     this.alienG = svg('g', { class: 'al-aliens' }, st.layers.sprites);
     this.shipG = svg('g', {}, st.layers.sprites);
     this._scenery();
@@ -140,6 +171,7 @@ export class Game extends ArcadeBase {
     if (!this.ship) return;
     this._scenery();
     this.ship.art.setAttribute('transform', `scale(${this.u.toFixed(2)})`);
+    this._layoutNotes();
     for (const n of this.notes) this._drawNote(n);
     for (const n of this.decor) this._drawNote(n);
     for (const a of this.aliens) this._pose(a);
@@ -171,18 +203,61 @@ export class Game extends ArcadeBase {
     return [st.noteLeft + 0.6 * sp, st.right - 3.4 * sp];
   }
   _centerX() { const [l, r] = this._span(); return (l + r) / 2; }
-  _hoverY() { return Math.max(2.45 * this.u + 4, this.stage.staffTop - 2.3 * this.stage.sp - this.u); }
+  _hoverY() { return Math.max(2.45 * this.u + 4, this.stage.staffTop - (2.3 + (this.chunkUp || 0)) * this.stage.sp - this.u); }
   _emitY() { return this.ship.py + 0.85 * this.u; }
 
+  /**
+   * Lay the chunk out across the staff. Short chunks are centred; long ones show a window of as many
+   * notes as fit comfortably and slide along it (the notes group scrolls, the window fades at its edges).
+   */
+  _layoutNotes() {
+    const [l, r] = this._span(), sp = this.stage.sp, count = Math.max(1, this.notes.length);
+    const minGap = 2.8 * sp;
+    let gap = Math.min(5.6 * sp, (r - l) / count);
+    if (gap >= minGap) { this.cap = count; this.x0 = l + (r - l - gap * count) / 2; }
+    else { this.cap = Math.max(3, Math.floor((r - l) / minGap)); gap = (r - l) / this.cap; this.x0 = l; }
+    this.gap = gap;
+    const max = Math.max(0, count - this.cap);
+    this.view = clamp(this.view, 0, max); this.viewTo = clamp(this.viewTo, 0, max);
+    for (const n of this.notes) n.bx = this._baseX(n);
+    this.noteWrap.setAttribute('mask', this.cap < this.notes.length ? 'url(#al-fade)' : 'none');
+    this._drawBars();
+    this._applyView();
+  }
+
+  _baseX(n) { return this.x0 + (n.i + 0.5) * this.gap; }
+
   _noteX(n) {
-    const [l, r] = this._span();
-    if (n.f !== undefined) return l + n.f * (r - l);
-    const count = Math.max(1, this.notes.length);
-    const gap = Math.min(5.6 * this.stage.sp, (r - l) / count);
-    return l + (r - l - gap * count) / 2 + (n.i + 0.5) * gap;
+    if (n.f !== undefined) { const [l, r] = this._span(); return l + n.f * (r - l); }
+    return this._baseX(n) - this.view * this.gap;
+  }
+
+  _applyView() {
+    const px = (this.view || 0) * (this.gap || 0);
+    this.noteG.setAttribute('transform', `translate(${(-px).toFixed(1)} 0)`);
+    for (const n of this.notes) n.x = (n.bx ?? 0) - px;
+  }
+
+  _scrollTo(s, dur = 0.38) {
+    if (s === this.viewTo) return;
+    this.viewTo = s;
+    if (this.viewTw) this.viewTw.killed = true;
+    const a = this.view;
+    this.viewTw = this.stage.tween(dur, (p) => { this.view = a + (s - a) * p; this._applyView(); }, { ease: ease.inOut });
+  }
+
+  /** Keep note i in the window, with `look` notes of read-ahead after it. */
+  _follow(i, look = 2) {
+    if (this.cap >= this.notes.length) return;
+    const W = this.cap, max = this.notes.length - W;
+    let s = this.viewTo;
+    if (i > s + W - 1 - look) s = Math.min(max, i - (W - 1 - look));
+    if (i < s) s = Math.max(0, i - 1);
+    this._scrollTo(s);
   }
 
   _staffBottom(clef) { const st = this.stage; return (clef === 'bass' ? st.bTop : st.tTop) + 4 * st.sp; }
+  _staffTopOf(clef) { const st = this.stage; return clef === 'bass' ? st.bTop : st.tTop; }
 
   _anchorXY(a) {
     const st = this.stage, y = this._hoverY();
@@ -200,6 +275,13 @@ export class Game extends ArcadeBase {
     const lg = svg('linearGradient', { id: 'al-beam-grad', x1: 0, y1: 0, x2: 0, y2: 1 }, defs);
     svg('stop', { offset: '0%', 'stop-color': '#a8f0c8', 'stop-opacity': 0.62 }, lg);
     svg('stop', { offset: '100%', 'stop-color': '#8fb7de', 'stop-opacity': 0.12 }, lg);
+    // soft edges for a scrolling window of notes
+    const [l, r] = this._span();
+    const x1 = l - 1.6 * sp, x2 = r + 1.6 * sp, f = (1.2 * sp) / (x2 - x1);
+    const fg = svg('linearGradient', { id: 'al-fade-g', gradientUnits: 'userSpaceOnUse', x1, x2, y1: 0, y2: 0 }, defs);
+    for (const [o, a] of [[0, 0], [f, 1], [1 - f, 1], [1, 0]]) svg('stop', { offset: o, 'stop-color': '#fff', 'stop-opacity': a }, fg);
+    const mask = svg('mask', { id: 'al-fade', maskUnits: 'userSpaceOnUse', x: x1, y: 0, width: x2 - x1, height: st.h }, defs);
+    svg('rect', { x: x1, y: 0, width: x2 - x1, height: st.h, fill: 'url(#al-fade-g)' }, mask);
     // seeded so the sky stays put across relayouts; kept out of the staff band
     let seed = 11;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -221,7 +303,7 @@ export class Game extends ArcadeBase {
    */
   _shipScale() {
     const st = this.stage;
-    const room = (st.staffTop - 1.6 * st.sp - 4) / 3.35;
+    const room = (st.staffTop - (1.6 + (this.topExtra || 0)) * st.sp - 4) / 3.35;
     return clamp(Math.min(Math.max(st.sp * 1.22, Math.min(st.w / 17, 22)), room), 11, 27);
   }
 
@@ -384,23 +466,56 @@ export class Game extends ArcadeBase {
   }
 
   // ---------- notes ----------
+  /** A note on the staff: head shaped by its length (song mode), stem, flags, dot, accidental, ledgers. */
   _drawNote(n) {
     n.el?.remove();
     n.el = null;
     if (!n.shown) return;
     const st = this.stage, sp = st.sp;
-    const x = this._noteX(n);
+    const bx = n.f !== undefined ? this._noteX(n) : this._baseX(n);
     const p = st.place(n.midi, n.prefer, n.clef);
-    n.x = x; n.y = p.y;
+    n.bx = bx; n.y = p.y;
+    n.x = n.f !== undefined ? bx : bx - this.view * this.gap;
     const g = svg('g', { class: `al-note ${n.hand === 'L' ? 'lh' : 'rh'} ${n.state || ''}` }, this.noteG);
-    st.ledgers(g, x, p.step, p.clef, 0.95);
-    if (p.acc !== null && p.acc !== undefined) st.glyph(g, GLYPH.acc[String(p.acc)], x - 1.75 * sp, p.y);
-    st.glyph(g, GLYPH.black, x - 0.59 * sp, p.y, 'al-head');
+    st.ledgers(g, bx, p.step, p.clef, 0.95);
+    const acc = n.acc !== undefined ? n.acc : p.acc;
+    if (acc !== null && acc !== undefined) st.glyph(g, GLYPH.acc[String(acc)], bx - 1.75 * sp, p.y);
+    const d = n.d;
+    const kind = d === undefined ? 'q' : d >= 3.99 ? 'w' : d >= 1.99 ? 'h' : d >= 0.99 ? 'q' : d >= 0.49 ? 'e' : 's';
+    const hw = kind === 'w' ? 0.84 : 0.59;
+    st.glyph(g, kind === 'w' ? GLYPH.whole : kind === 'h' ? GLYPH.half : GLYPH.black, bx - hw * sp, p.y, 'al-head');
+    if (d !== undefined && [6, 3, 1.5, 0.75].some((v) => Math.abs(d - v) < 0.01)) {
+      svg('circle', { cx: bx + (hw + 0.42) * sp, cy: p.y - (p.step % 2 === 0 ? 0.5 * sp : 0), r: 0.17 * sp, class: 'al-dot' }, g);
+    }
+    if (kind === 'w') { n.el = g; this._applyDrop(n); return; }
     const up = p.step < (p.clef === 'bass' ? 22 : 34);
-    const sx = up ? x + 0.53 * sp : x - 0.53 * sp;
-    svg('line', { x1: sx, x2: sx, y1: p.y + (up ? -0.2 : 0.2) * sp, y2: p.y + (up ? -3.3 : 3.3) * sp, 'stroke-width': Math.max(1.2, 0.12 * sp), class: 'al-stem' }, g);
+    const sx = up ? bx + 0.53 * sp : bx - 0.53 * sp;
+    const len = kind === 's' ? 3.7 : 3.3;
+    const tip = p.y + (up ? -len : len) * sp;
+    const sw = Math.max(1.2, 0.12 * sp);
+    svg('line', { x1: sx, x2: sx, y1: p.y + (up ? -0.2 : 0.2) * sp, y2: tip, 'stroke-width': sw, class: 'al-stem' }, g);
+    const flags = kind === 'e' ? 1 : kind === 's' ? 2 : 0;
+    for (let i = 0; i < flags; i++) {
+      const y0 = tip + (up ? 0.75 : -0.75) * i * sp, s = up ? 1 : -1;
+      svg('path', { d: `M${sx},${y0} c${0.1 * sp},${0.85 * sp * s} ${0.95 * sp},${1.05 * sp * s} ${0.78 * sp},${2.1 * sp * s}`, 'stroke-width': sw * 1.25, class: 'al-flag' }, g);
+    }
     n.el = g;
     this._applyDrop(n);
+  }
+
+  /** Bar lines between the notes of a song chunk, in the scrolling notes group. */
+  _drawBars() {
+    this.barG?.remove();
+    this.barG = svg('g', { class: 'al-bars' });
+    this.noteG.prepend(this.barG);
+    const sp = this.stage.sp;
+    for (let i = 1; i < this.notes.length; i++) {
+      const a = this.notes[i - 1], b = this.notes[i];
+      if (a.bar === undefined || a.bar === b.bar) continue;
+      const x = (a.bx + b.bx) / 2 + (b.acc !== null && b.acc !== undefined ? -0.5 * sp : 0);
+      const top = this._staffTopOf(b.clef);
+      svg('line', { x1: x, x2: x, y1: top, y2: top + 4 * sp, class: 'al-barline' }, this.barG);
+    }
   }
 
   _applyDrop(n) {
@@ -437,7 +552,7 @@ export class Game extends ArcadeBase {
   _ghost(midi, n) {
     const st = this.stage, sp = st.sp;
     const clef = st.opts.staves === 'grand' && Math.abs(midi - n.midi) <= 5 ? n.clef : st.clefOf(midi);
-    const p = st.place(midi, isBlack(midi) ? n.prefer || 'sharp' : undefined, clef);
+    const p = st.place(midi, isBlack(midi) && n.prefer && Math.abs(midi - n.midi) <= 2 ? n.prefer : undefined, clef);
     if (p.y < 0 || p.y > st.h) return;
     const x = n.x + 1.2 * sp;
     const g = svg('g', { class: 'al-ghost' }, st.layers.fx);
@@ -445,7 +560,7 @@ export class Game extends ArcadeBase {
     st.glyph(g, GLYPH.black, x - 0.59 * sp, p.y);
     const fs = clamp(1.05 * sp, 12, 20);
     const t = svg('text', { x: x - 0.25 * sp, y: p.y - 0.8 * sp, 'font-size': fs, class: 'al-ghost-label' }, g);
-    t.textContent = noteName(midi, { prefer: p.acc ? (n.prefer || 'sharp') : undefined });
+    t.textContent = p.name;
     st.tween(1.5, (q) => {
       const shake = q < 0.25 ? Math.sin(q * 60) * (1 - q / 0.25) * 0.25 * sp : 0;
       g.setAttribute('transform', `translate(${shake.toFixed(1)} 0)`);
@@ -453,29 +568,32 @@ export class Game extends ArcadeBase {
     }, { done: () => g.remove() });
   }
 
-  /** Beam every note on the staff back up into the saucer. */
+  /** Beam every note in view back up into the saucer. */
   _collect() {
-    const st = this.stage, sp = st.sp;
+    const st = this.stage, sp = st.sp, [l, r] = this._span();
     const shown = this.notes.filter((n) => n.shown && n.el);
-    if (!shown.length) return;
+    for (const n of shown) if (n.x < l - this.gap || n.x > r + this.gap) { n.el.remove(); n.el = null; n.shown = false; }
+    const vis = shown.filter((n) => n.el);
+    this.barG?.setAttribute('opacity', 0);
+    if (!vis.length) return;
     this.ship.anchor = 'center';
-    for (const n of shown) { if (n.state === 'dim') this._setState(n, ''); }
+    for (const n of vis) { if (n.state === 'dim') this._setState(n, ''); }
     this.beam.dir = -1;
     this.sfx.beam(0.55, true);
     this._beam(() => {
-      const xs = this.notes.map((n) => n.x), ys = this.notes.map((n) => n.y);
-      const l = Math.min(...xs), r = Math.max(...xs);
-      return { x: (l + r) / 2, y: Math.max(...ys) + 0.9 * sp, w: (r - l) / 2 + 1.3 * sp };
+      const xs = vis.map((n) => n.x), ys = vis.map((n) => n.y);
+      const a = Math.min(...xs), b = Math.max(...xs);
+      return { x: (a + b) / 2, y: Math.max(...ys) + 0.9 * sp, w: (b - a) / 2 + 1.3 * sp };
     }, true, 0.15);
-    shown.forEach((n, j) => {
+    vis.forEach((n, j) => {
       st.tween(0.42, (p) => {
         if (!n.el) return;
         const dx = (this.ship.px - n.x) * p, dy = (this._emitY() - n.y) * p, s = 1 - 0.75 * p;
-        n.el.setAttribute('transform', `translate(${(n.x + dx).toFixed(1)} ${(n.y + dy).toFixed(1)}) scale(${s.toFixed(3)}) translate(${(-n.x).toFixed(1)} ${(-n.y).toFixed(1)})`);
+        n.el.setAttribute('transform', `translate(${(n.bx + dx).toFixed(1)} ${(n.y + dy).toFixed(1)}) scale(${s.toFixed(3)}) translate(${(-n.bx).toFixed(1)} ${(-n.y).toFixed(1)})`);
         n.el.setAttribute('opacity', (1 - 0.7 * p).toFixed(2));
-      }, { ease: ease.in, delay: 0.18 + j * 0.06, done: () => { n.shown = false; n.el?.remove(); n.el = null; } });
+      }, { ease: ease.in, delay: 0.18 + j * Math.min(0.06, 0.6 / vis.length), done: () => { n.shown = false; n.el?.remove(); n.el = null; } });
     });
-    this._after(0.4 + shown.length * 0.06, () => { this._beam(null, false, 0.25); this.beam.dir = 1; });
+    this._after(0.4 + Math.min(0.6, vis.length * 0.06), () => { this._beam(null, false, 0.25); this.beam.dir = 1; });
   }
 
   // ---------- cues: red triangle, finger window, key spotlight ----------
@@ -488,7 +606,7 @@ export class Game extends ArcadeBase {
     this.triOn = false;
   }
 
-  /** How much help the current note gets: the repetition's level, raised after repeated misses. */
+  /** How much help the current note gets: the copy's level, raised after repeated misses. */
   get cueLevel() {
     if (this.phase !== 'turn') return -1;
     return Math.max(this.help, this.miss >= 3 ? 2 : this.miss >= 2 ? 1 : 0);
@@ -501,8 +619,11 @@ export class Game extends ArcadeBase {
     const lvl = this.cueLevel;
     this.triOn = !!n && lvl >= 1;
     if (!n) { if (this.phase === 'turn') this._windows('R', null); return; }
+    this._follow(this.idx, 2);
     this._windows(n.hand, lvl >= 1 ? n.finger : null);
     if (lvl >= 2) kb.mark(n.midi, n.hand === 'L' ? 'cue-l' : 'cue-r', true);
+    // song fingerings change within a phrase, so only the key in play shows its finger
+    if (this.songLevel) { kb.clearFingers(); if (lvl >= 2 && n.finger) kb.setFinger(n.midi, n.finger); }
     this.ship.anchor = lvl >= 1 ? { i: n.i } : 'center';
     if (this.help === 0 && n.state === 'dim' && lvl >= 1) this._setState(n, '');
     this._placeTri();
@@ -553,7 +674,7 @@ export class Game extends ArcadeBase {
     this.fingersOn = false;
   }
 
-  // ---------- phrases ----------
+  // ---------- made-up phrases (the concept levels) ----------
   /** Normalize a phrase given as MIDI numbers or {midi, finger, hand}; fill in five-finger fingering. */
   _spec(list) {
     const items = list.map((x) => (typeof x === 'number' ? { midi: x } : { ...x }));
@@ -571,11 +692,11 @@ export class Game extends ArcadeBase {
   }
 
   _fromTokens(str) {
-    const hands = this.lv.hands, def = Object.keys(hands)[0];
+    const pos = this.lv.pos, def = Object.keys(pos)[0];
     return str.trim().split(/\s+/).map((tok) => {
       const [, hd, d] = /^([LR]?)(\d)$/.exec(tok);
       const hand = hd || def;
-      return { midi: hands[hand][+d], hand, finger: hand === 'L' ? 5 - +d : +d + 1 };
+      return { midi: pos[hand][+d], hand, finger: hand === 'L' ? 5 - +d : +d + 1 };
     });
   }
 
@@ -598,14 +719,136 @@ export class Game extends ArcadeBase {
     });
   }
 
+  // ---------- songs ----------
+  /** The song in play: its score, the hand's line in learning phrases (cached per song, hand and range). */
+  _song() {
+    const lv = this.lv, def = this.songDef;
+    if (!def) return null;
+    const hand = lv.hands === 'L' ? 'L' : 'R';
+    const key = `${def.id}|${hand}|${lv.fromBar ?? ''}|${lv.toBar ?? ''}`;
+    if (this._songCache?.key === key) return this._songCache;
+    const score = buildScore(def);
+    const range = { fromBar: lv.fromBar ?? 0, toBar: lv.toBar ?? Infinity };
+    const raw = phrasesOf(score, hand, { min: 3, max: 8, ...range });
+    // sparse accompaniment lines come out in phrases of one or two notes: fold them together
+    const phrases = [];
+    for (const p of raw) {
+      const last = phrases[phrases.length - 1];
+      if (last && (last.notes.length < 3 || p.notes.length < 3) && last.notes.length + p.notes.length <= 9) {
+        last.notes = last.notes.concat(p.notes); last.toBar = p.toBar;
+      } else phrases.push({ ...p, notes: [...p.notes] });
+    }
+    phrases.forEach((p, i) => {
+      this._fingerFill(p.notes, hand, score.key);
+      for (const n of p.notes) { n.pi = i; n.hand = hand; }
+    });
+    const line = phrases.flatMap((p) => p.notes);
+    this._songCache = {
+      key, def, score, hand, phrases, line, noteBars: new Set(line.map((n) => n.bar)),
+      whole: range.fromBar <= 0 && range.toBar === Infinity,
+      fromBar: phrases[0]?.fromBar ?? 0, toBar: phrases[phrases.length - 1]?.toBar ?? 0,
+    };
+    return this._songCache;
+  }
+
+  /**
+   * Fill in fingers the song doesn't give: from the nearest fingered note (keeping the hand where it
+   * is), otherwise the five-finger rule when the phrase fits under one hand. Unknown stays unlit.
+   */
+  _fingerFill(notes, hand, key) {
+    const dir = hand === 'L' ? -1 : 1;
+    const steps = notes.map((n) => spell(n.midi, key, n.prefer).step);
+    const known = notes.map((n, i) => (n.finger ? i : -1)).filter((i) => i >= 0);
+    const lo = Math.min(...steps), span = Math.max(...steps) - lo;
+    notes.forEach((n, i) => {
+      if (n.finger) return;
+      let f = null, best = -1, bd = 1e9;
+      for (const j of known) { const d = Math.abs(j - i) + (j > i ? 0.5 : 0); if (d < bd) { bd = d; best = j; } }
+      if (best >= 0) { const g = notes[best].finger + dir * (steps[i] - steps[best]); if (g >= 1 && g <= 5) f = g; }
+      if (f === null && span <= 4) f = hand === 'L' ? 5 - (steps[i] - lo) : steps[i] - lo + 1;
+      n.finger = f;
+    });
+  }
+
+  /**
+   * The chaining plan: each new phrase is shown and copied twice (guided, then from memory), then
+   * joined to the phrases before it and played once from memory. Joins grow from the start of the
+   * section while they stay short (JOIN_MAX notes), then slide along in pairs. Songs repeat
+   * themselves, so a phrase heard before is not taught again, one that starts like an earlier phrase
+   * goes straight to memory, and a stretch already played from memory is not joined twice. Short
+   * songs end with one run through the whole tune.
+   */
+  _songSteps(phrases) {
+    const steps = [], played = new Set();
+    const sig = (notes) => notes.map((n) => n.midi).join(',');
+    const count = (a, b) => phrases.slice(a, b + 1).reduce((s, p) => s + p.notes.length, 0);
+    phrases.forEach((p, i) => {
+      const me = sig(p.notes);
+      p.same = phrases.findIndex((q, j) => j < i && sig(q.notes) === me);
+      const head = Math.max(3, Math.ceil(p.notes.length * 0.6));
+      p.like = p.same >= 0 || p.notes.length < 4 ? -1
+        : phrases.findIndex((q, j) => j < i && q.notes.length >= head && sig(q.notes.slice(0, head)) === sig(p.notes.slice(0, head)));
+    });
+    let start = 0;
+    phrases.forEach((p, k) => {
+      if (p.same < 0) steps.push({ kind: 'new', from: k, to: k, helps: p.like >= 0 ? [0] : [2, 0], surprise: phrases.length === 1 });
+      if (k === 0) return;
+      let j = start;
+      while (j < k - 1 && count(j, k) > JOIN_MAX) j++;
+      start = j;
+      const key = sig(phrases.slice(j, k + 1).flatMap((q) => q.notes));
+      if (played.has(key)) return;
+      played.add(key);
+      steps.push({ kind: 'join', from: j, to: k, helps: [0], surprise: true });
+    });
+    if (phrases.length > 2 && count(0, phrases.length - 1) <= 24) {
+      steps.push({ kind: 'whole', from: 0, to: phrases.length - 1, helps: [1], surprise: true });
+    }
+    for (const s of steps) s.notes = phrases.slice(s.from, s.to + 1).flatMap((p) => p.notes);
+    return steps;
+  }
+
+  /** Bars of the song (for this hand) learned from memory; a repeated phrase counts once its twin is learned. */
+  _learnedBars() {
+    const s = this._song(), out = new Set();
+    s.phrases.forEach((p, i) => {
+      if (this.learned.has(i) || (p.same >= 0 && this.learned.has(p.same))) for (const n of p.notes) out.add(n.bar);
+    });
+    return out;
+  }
+
+  /** Bar numbers as a musician counts them: the pickup is not bar 1. */
+  _bars(a, b) {
+    const pick0 = (this._song()?.score.pickup || 0) > 0;
+    const lab = (x) => (pick0 ? x : x + 1);
+    if (pick0 && a === 0 && b === 0) return 'the pickup';
+    const la = Math.max(1, lab(a)), lb = lab(b);
+    return la === lb ? `bar ${la}` : `bars ${la}–${lb}`;
+  }
+
+  // ---------- notes for a chunk ----------
+  /** Notes ready for the staff: clef, spelling, and accidentals as a musician would write them. */
   _dress(spec) {
-    const staves = this.stage.opts.staves;
-    return spec.map((n, i) => ({
-      ...n, i,
-      clef: staves !== 'grand' ? staves : n.hand === 'L' ? (n.midi <= 62 ? 'bass' : 'treble') : (n.midi >= 57 ? 'treble' : 'bass'),
-      prefer: isBlack(n.midi) ? 'sharp' : undefined,
-      shown: false, drop: 1, state: '', el: null, x: 0, y: 0,
-    }));
+    const st = this.stage, staves = st.opts.staves, key = st.opts.key || 'C', song = this.songLevel;
+    const sig = keySigMap(key);
+    let bar = null, seen = new Map();
+    return spec.map((n, i) => {
+      const out = {
+        ...n, i,
+        clef: staves !== 'grand' ? staves : n.hand === 'L' ? (n.midi <= 62 ? 'bass' : 'treble') : (n.midi >= 57 ? 'treble' : 'bass'),
+        prefer: n.prefer ?? (!song && isBlack(n.midi) ? 'sharp' : undefined),
+        shown: false, drop: 1, state: '', el: null, x: 0, y: 0, bx: 0,
+      };
+      if (song) {
+        // an accidental lasts to the bar line: show altered notes, and a natural where one is cancelled
+        if (n.bar !== bar) { bar = n.bar; seen = new Map(); }
+        const s = spell(n.midi, key, out.prefer);
+        const sigAlter = sig[s.letter] || 0;
+        out.acc = s.alter !== sigAlter ? s.alter : seen.has(s.step) && seen.get(s.step) !== s.alter ? 0 : null;
+        seen.set(s.step, s.alter);
+      }
+      return out;
+    });
   }
 
   // ---------- attract: the saucer drifts and beams notes silently ----------
@@ -614,18 +857,26 @@ export class Game extends ArcadeBase {
     this.ship.anchor = { f: 0.72 };
     const t = this._anchorXY(this.ship.anchor);
     this.ship.x = t.x; this.ship.y = t.y;
-    const lv = this.game.levels[this.level];
-    this.attractPool = Object.entries(lv.hands).flatMap(([hand, list]) => list.map((midi) => ({ midi, hand })));
-    this._after(0.6, () => this._attractBeam());
+    if (this.songLevel) {
+      const s = this._song();
+      this.attractPool = s ? s.line.slice(0, 16) : [];
+    } else {
+      const lv = this.game.levels[this.level];
+      this.attractPool = Object.entries(lv.pos).flatMap(([hand, list]) => list.map((midi) => ({ midi, hand })));
+    }
+    this.attractI = 0;
+    if (this.attractPool.length) this._after(0.6, () => this._attractBeam());
   }
 
   _attractBeam() {
     if (this.mode !== 'attract') return;
-    const f = rand(0.06, 0.94);
+    const song = this.songLevel;
+    const i = this.attractI++;
+    const f = song ? 0.06 + (i % 8) * 0.12 : rand(0.06, 0.94);
     this.ship.anchor = { f };
     this._after(0.75, () => {
-      const pick1 = pick(this.attractPool);
-      const n = this._dress([{ ...pick1, finger: null }])[0];
+      const src = song ? this.attractPool[i % this.attractPool.length] : pick(this.attractPool);
+      const n = this._dress([{ ...src, finger: null }])[0];
       n.f = f;
       this.decor.push(n);
       this._beam(this._noteTarget(n), true, 0.12);
@@ -635,32 +886,46 @@ export class Game extends ArcadeBase {
         const g = n.el;
         if (g) this.stage.tween(0.6, (p) => g.setAttribute('opacity', 1 - p), { done: () => { g.remove(); this.decor = this.decor.filter((d) => d !== n); } });
       });
-      this._after(1.4, () => this._attractBeam());
+      this._after(song ? 1.0 : 1.4, () => this._attractBeam());
     });
   }
 
   // ---------- round ----------
   start() {
-    const lv = this.lv;
+    const lv = this.lv, song = this.songLevel;
     this.reset();
     this.mode = 'play';
     this.playing = true;
     this.score = 0; this.right = 0; this.done = 0; this.errors = 0;
-    this.surprises = 0; this.timeouts = 0; this.phrasesDone = 0;
-    this.reps = Math.max(1, Math.round(lv.reps || 3));
-    this.phrases = this._makePhrases();
+    this.surprises = 0; this.surpriseChances = 0; this.timeouts = 0; this.stepsDone = 0;
+    this.learned = new Set(); this.phraseErr = [];
     this.surpriseOrder = shuffle(['wave', 'hop', 'spin']);
     this.k = -1; this.rep = -1; this.help = 2; this.miss = 0; this.idx = 0; this.timed = false;
-    // finger numbers for the keyboard: the whole five-finger position(s) in play
     this.fingerKeys = new Map();
-    if (lv.hands && !lv.phrases?.length) {
-      for (const [hand, list] of Object.entries(lv.hands)) list.forEach((m, d) => this.fingerKeys.set(m, hand === 'L' ? 5 - d : d + 1));
+    let all;
+    if (song) {
+      const s = this._song();
+      if (!s || !s.phrases.length) { this.plan = []; this._end(true); return; }
+      this.plan = this._songSteps(s.phrases);
+      all = s.line.map((n) => n.midi);
+      // let the coach tie trouble to bars of this song
+      const cur = this.app.coach.current;
+      if (cur) Object.assign(cur.context, { ref: { type: 'song', id: s.def.id }, score: s.score, hands: s.hand, staves: this.stage.opts.staves });
+      this.app.ui.prompt(this.embedded?.text || `${s.def.title}${s.hand === 'L' ? ', left hand' : ''}: ${s.phrases.length} phrase${s.phrases.length > 1 ? 's' : ''} to learn. Watch the saucer.`);
     } else {
-      for (const p of this.phrases) for (const n of p) if (n.finger) this.fingerKeys.set(n.midi, n.finger);
+      const reps = Math.max(1, Math.round(lv.reps || 3));
+      const helps = Array.from({ length: reps }, (_, r) => (reps > 1 && r === reps - 1 ? 0 : r === 0 ? 2 : 1));
+      this.plan = this._makePhrases().map((notes) => ({ kind: 'phrase', notes, helps, surprise: true }));
+      // finger numbers for the keyboard: the whole five-finger position(s) in play
+      if (lv.pos && !lv.phrases?.length) {
+        for (const [hand, list] of Object.entries(lv.pos)) list.forEach((m, d) => this.fingerKeys.set(m, hand === 'L' ? 5 - d : d + 1));
+      } else {
+        for (const st of this.plan) for (const n of st.notes) if (n.finger) this.fingerKeys.set(n.midi, n.finger);
+      }
+      all = this.plan.flatMap((st) => st.notes.map((n) => n.midi)).concat([...this.fingerKeys.keys()]);
+      this.app.ui.prompt(this.embedded?.text || 'Watch the saucer. The aliens play a phrase, then you copy it.');
     }
-    const all = this.phrases.flat().map((n) => n.midi).concat([...this.fingerKeys.keys()]);
     this.app.keyboard.need(Math.min(...all), Math.max(...all));
-    this.app.ui.prompt(this.embedded?.text || 'Watch the saucer. The aliens play a phrase, then you copy it.');
     this.app.ui.status('');
     this.app.ui.foot(h('button', { class: 'btn', onclick: () => this._end(true) }, 'Stop'));
     // fly in from the top left
@@ -668,52 +933,87 @@ export class Game extends ArcadeBase {
     this.ship.anchor = 'center';
     this.phase = 'arrive';
     this._after(0.35, () => this.sfx.loop('hum', 0.045));   // a gentle hover hum; finish() stops it
-    this._after(1.1, () => this._phrase(0));
+    this._after(1.1, () => this._step(0));
     this._hud();
   }
 
-  _phrase(k) {
-    const lv = this.lv;
-    this.k = k;
+  /** One step of the plan: the aliens beam and play the chunk, then the copies begin. */
+  _step(k) {
+    const step = this.plan[k], song = this.songLevel;
+    this.k = k; this.cur = step;
     for (const n of this.notes) n.el?.remove();
-    this.notes = this._dress(this.phrases[k]);
+    this.notes = this._dress(step.notes);
+    this.helps = step.helps;
     this.rep = -1; this.phase = 'demo'; this.pRight = 0; this.idx = 0;
+    if (this.viewTw) this.viewTw.killed = true;
+    this.view = 0; this.viewTo = 0;
+    this.chunkUp = song ? this._extent(this.notes, this.stage.opts.key).up : 0;
+    this._layoutNotes();
     const n = this.notes.length;
-    const grand = this.stage.opts.staves === 'grand';
-    this.app.ui.prompt(this.embedded?.text || `Watch and listen: ${n} notes. The lit window shows which finger plays each note.${grand ? ' Blue notes are for the left hand.' : ''}`);
+    if (!this.embedded?.text) {
+      if (song) {
+        const s = this._song(), P = s.phrases.length, title = s.def.title;
+        const where = this._bars(this.notes[0].bar, this.notes[n - 1].bar);
+        const ph = s.phrases[step.to];
+        this.app.ui.prompt(step.kind === 'new'
+          ? (ph.like >= 0 ? `${title}, phrase ${step.from + 1} of ${P} (${where}) starts like phrase ${ph.like + 1}. Listen for what changes.` : `${title}, phrase ${step.from + 1} of ${P} (${where}): watch and listen.`)
+          : step.kind === 'join'
+            ? (ph.same >= 0 ? `Phrase ${step.to + 1} is phrase ${ph.same + 1} again, so you know it. Here it is joined up (${where}).` : `Now phrases ${step.from + 1} to ${step.to + 1} joined up (${where}). Listen to how they connect.`)
+            : `The whole of ${title}. Listen once more.`);
+      } else {
+        const grand = this.stage.opts.staves === 'grand';
+        this.app.ui.prompt(`Watch and listen: ${n} notes. The lit window shows which finger plays each note.${grand ? ' Blue notes are for the left hand.' : ''}`);
+      }
+    }
     this.app.ui.status('');
-    this._banner('Listen');
-    this._fingerMap(true);
-    const gap = lv.tempo || (n >= 6 ? 0.78 : 0.85);
-    this.notes.forEach((note, i) => this._after(0.55 + i * gap, () => this._demoNote(note, gap)));
-    this._after(0.55 + n * gap + 0.45, () => this._turn(0));
+    const again = song && step.kind === 'join' && this._song().phrases[step.to].same >= 0;
+    this._banner(step.kind === 'join' ? (again ? 'You know this' : 'Join up') : step.kind === 'whole' ? 'Whole song' : 'Listen');
+    this._fingerMap(!song);
+    const gaps = this._gaps(step);
+    this.dropT = clamp(Math.min(...gaps) * 0.6, 0.16, 0.24);
+    let t = 0.45;
+    this.notes.forEach((note, i) => { this._after(t, () => this._demoNote(note, gaps[i], i === n - 1)); t += gaps[i]; });
+    this._after(t + 0.35, () => this._turn(0));
     this._hud();
   }
 
-  _demoNote(n, gap) {
-    const kb = this.app.keyboard;
+  /** Seconds between demo notes: even for made-up phrases; the song's own rhythm, a little slower, for songs. */
+  _gaps(step) {
+    const ns = this.notes;
+    if (!this.songLevel) { const g = this.lv.tempo || (ns.length >= 6 ? 0.78 : 0.85); return ns.map(() => g); }
+    const spb = 60 / (this._song().score.tempo || 90);
+    const slow = step.kind === 'new' ? 0.72 : 1, min = step.kind === 'new' ? 0.42 : 0.3;
+    return ns.map((x, i) => {
+      const ioi = i + 1 < ns.length ? ns[i + 1].t - x.t : x.d || 1;
+      return clamp((Math.min(ioi, 2.5) * spb) / slow, min, 1.4);
+    });
+  }
+
+  _demoNote(n, gap, last) {
+    const kb = this.app.keyboard, song = this.songLevel, drop = this.dropT || 0.24;
     this.ship.anchor = { i: n.i };
+    this._follow(n.i, 1);
     this._after(0.2, () => {
-      this.sfx.beam(0.4);
+      if (gap >= 0.55 || n.i === 0) this.sfx.beam(0.4);
       this._beam(this._noteTarget(n), true, 0.1);
       this._windows(n.hand, n.finger);
       kb.clear('demo');
       kb.mark(n.midi, 'demo', true);
-      this._dropNote(n, 0.24);
-      this._after(0.24, () => this.app.sound.play(n.midi, 0.78, undefined, gap * 0.95));
-      this._after(Math.max(0.36, gap - 0.32), () => { this._beam(null, false, 0.18); kb.mark(n.midi, 'demo', false); });
+      if (song) { kb.clearFingers(); if (n.finger) kb.setFinger(n.midi, n.finger); }
+      this._dropNote(n, drop);
+      this._after(drop, () => this.app.sound.play(n.midi, 0.78, undefined, gap * 0.95));
+      this._after(Math.max(0.2, Math.min(gap - 0.12, 0.55)), () => {
+        kb.mark(n.midi, 'demo', false);
+        if (gap >= 0.6 || last) this._beam(null, false, 0.18);
+        if (song && last) kb.clearFingers();
+      });
     });
   }
 
-  _helpFor(r) {
-    if (this.reps > 1 && r === this.reps - 1) return 0;
-    return r === 0 ? 2 : 1;
-  }
-
   _turn(r) {
-    const n = this.notes.length;
-    this.rep = r; this.idx = 0; this.miss = 0;
-    this.help = this._helpFor(r);
+    const n = this.notes.length, song = this.songLevel, kind = this.cur.kind;
+    this.rep = r; this.idx = 0; this.miss = 0; this.repRight = 0;
+    this.help = this.helps[r];
     this.timed = this.help === 0;
     this.timeMax = this.timed ? (this.lv.time || 2.5 + 1.3 * n) : 0;
     this.timeLeft = this.timeMax;
@@ -724,16 +1024,18 @@ export class Game extends ArcadeBase {
       note.state = this.help === 0 ? 'dim' : '';
       this._drawNote(note);
     }
+    this.barG?.setAttribute('opacity', 1);
+    this._scrollTo(0);
     const { ui } = this.app;
     if (!this.embedded?.text) {
       ui.prompt(this.help === 2 ? 'Your turn. Play the note above the red triangle, with the finger in the lit window.'
-        : this.help === 1 ? 'Again, with less help: just the triangle and the finger number.'
-          : 'Now from memory, before the red bar runs out.');
+        : this.help === 1 ? (kind === 'whole' ? 'Play the whole song. The triangle and the lit window show the way.' : 'Again, with less help: just the triangle and the finger number.')
+          : kind === 'join' ? 'Play them together from memory, before the red bar runs out.' : 'Now from memory, before the red bar runs out.');
     }
-    ui.status(`Copy ${r + 1} of ${this.reps}`);
-    this._banner(r === 0 ? 'Your turn' : this.help === 0 ? 'From memory' : 'Less help');
+    ui.status(song ? (kind === 'new' ? (this.help ? 'Guided copy' : 'From memory') : kind === 'join' ? 'Joined up, from memory' : 'The whole song') : `Copy ${r + 1} of ${this.helps.length}`);
+    this._banner(this.help === 2 ? 'Your turn' : this.help === 0 ? 'From memory' : kind === 'whole' ? 'Play it through' : 'Less help');
     this._windows('R', null);
-    this._fingerMap(this.help >= 2);
+    this._fingerMap(!song && this.help >= 2);
     this._cues();
     this._timeBar();
     this._hud();
@@ -750,29 +1052,32 @@ export class Game extends ArcadeBase {
     if (e.midi === n.midi) this._right(n); else this._wrong(n, e.midi);
   }
 
+  /** Coach info for a note: the song's key and the beat, so trouble can be tied to bars. */
+  _coachInfo(n) { return this.songLevel ? { key: this.stage.opts.key, t: n.t } : { key: 'C' }; }
+
   _right(n) {
     const st = this.stage, sp = st.sp;
     const first = this.miss === 0;
-    if (first) { this.right++; this.pRight++; }
+    if (first) { this.right++; this.pRight++; this.repRight++; }
     this.done++;
     const pts = Math.round([100, 75, 50][this.help] * (first ? 1 : 0.5));
     this.score += pts;
-    this.app.coach.record('hit');
+    this.app.coach.record('hit', this._coachInfo(n));
     this.app.keyboard.flash(n.midi, 'hit');
     this._setState(n, 'hit');
     st.puff(n.x, n.y, '#62c993', 7, 0.22);
     st.float(n.x, n.y - 1.7 * sp, `+${pts}`);
     this._zap(n);
     this.idx++; this.miss = 0;
-    this.app.ui.status(this.idx < this.notes.length ? `Copy ${this.rep + 1} of ${this.reps}` : 'Copied');
     if (this.idx >= this.notes.length) this._repDone(); else this._cues();
     this._hud();
   }
 
   _wrong(n, midi) {
     this.miss++; this.errors++;
+    if (n.pi !== undefined) this.phraseErr[n.pi] = (this.phraseErr[n.pi] || 0) + 1;
     this.score = Math.max(0, this.score - 20);
-    this.app.coach.record('wrong-pitch', { expected: n.midi, played: midi, key: 'C' });
+    this.app.coach.record('wrong-pitch', { expected: n.midi, played: midi, ...this._coachInfo(n) });
     this.app.keyboard.flash(midi, 'miss', 450);
     this.sfx.buzz();
     this.ship.wob = 1;
@@ -785,12 +1090,20 @@ export class Game extends ArcadeBase {
     this._hud();
   }
 
+  /** A memory copy finished: in song mode, the phrases in it count as learned when 80% were right. */
+  _memory(frac) {
+    if (!this.songLevel || this.help !== 0) return;
+    if (frac >= (this.lv.surprise ?? 0.8)) for (let p = this.cur.from; p <= this.cur.to; p++) this.learned.add(p);
+  }
+
   _repDone() {
     const st = this.stage;
     this.phase = 'between';
     this.triOn = false; this._placeTri();
     this.app.keyboard.clear('cue-r', 'cue-l');
+    if (this.songLevel) this.app.keyboard.clearFingers();
     this._windows('R', null, 'party');
+    this._memory(this.repRight / this.notes.length);
     if (this.timed && this.timeLeft > 0) {
       const b = Math.round(this.timeLeft * 10);
       this.score += b;
@@ -799,62 +1112,83 @@ export class Game extends ArcadeBase {
     this.timed = false;
     this._timeBar();
     this._hud();
-    if (this.rep < this.reps - 1) this._after(0.95, () => this._turn(this.rep + 1));
-    else this._after(0.7, () => this._phraseDone());
+    if (this.rep < this.helps.length - 1) this._after(0.85, () => this._turn(this.rep + 1));
+    else this._after(0.6, () => this._stepDone());
   }
 
   _timeUp() {
     this.phase = 'timeup';
     this.timeouts++;
     const n = this.notes[this.idx];
-    if (n) this.app.coach.record('missed', { expected: n.midi });
+    if (n) this.app.coach.record('missed', { expected: n.midi, ...this._coachInfo(n) });
     this.done += this.notes.length - this.idx;
-    for (const m of this.notes.slice(this.idx)) this._setState(m, 'late');
+    for (const m of this.notes.slice(this.idx)) {
+      this._setState(m, 'late');
+      if (m.pi !== undefined) this.phraseErr[m.pi] = (this.phraseErr[m.pi] || 0) + 1;
+    }
+    this._memory(this.repRight / this.notes.length);
     this.triOn = false; this._placeTri();
     this.app.keyboard.clear('cue-r', 'cue-l');
+    if (this.songLevel) this.app.keyboard.clearFingers();
     this._windows('R', null, 'sad');
     this._mouth('frown', 1.2);
     this.sfx.buzz();
     this._banner('Time is up');
     this.app.ui.status('Out of time. These were the notes left.');
-    this._after(1.5, () => { this.timed = false; this._timeBar(); this._phraseDone(); });
+    this._after(1.5, () => { this.timed = false; this._timeBar(); this._stepDone(); });
   }
 
-  _phraseDone() {
-    const slots = this.notes.length * this.reps;
+  /** After the last copy of a step: beam the notes up, maybe a surprise, then on to the next step. */
+  _stepDone() {
+    const step = this.cur, song = this.songLevel, last = this.k + 1 >= this.plan.length;
+    const slots = this.notes.length * this.helps.length;
     const need = this.lv.surprise ?? 0.8;
-    const won = this.pRight / slots >= need;
-    this.phrasesDone++;
+    const ok = this.pRight / slots >= need;
+    this.stepsDone++;
     this.phase = 'collect';
     this.app.ui.status('');
     this._collect();
     let wait;
-    if (won) {
+    if (step.surprise) this.surpriseChances++;
+    if (step.surprise && ok) {
       this.surprises++;
-      this._after(0.8, () => this._surprise());
-      wait = 0.8 + 5.0;
-    } else {
+      const short = song && !last;
+      this._after(0.75, () => this._surprise(short));
+      wait = 0.75 + (short ? 3.3 : 5.0);
+    } else if (step.surprise) {
       this._windows('R', null, 'sad');
       this._mouth('frown', 1.4);
       if (!this.embedded?.text) this.app.ui.prompt(`${this.pRight} of ${slots} right first time. The aliens wanted ${Math.round(need * 100)}% for their surprise.`);
       this._banner('So close');
       wait = 1.8;
+    } else {
+      // a new song phrase: no surprise yet (it comes after the join), just a word and on we go
+      this._banner(ok ? 'Got it' : 'Keep going');
+      if (!ok) this._mouth('frown', 0.8);
+      wait = 0.95;
     }
     this._after(wait, () => {
       this._windows('R', null);
-      if (this.k + 1 < this.phrases.length) this._phrase(this.k + 1); else this._end(false);
+      if (!last) this._step(this.k + 1); else this._end(false);
     });
     this._hud();
   }
 
   // ---------- the aliens' surprise ----------
-  _surprise() {
+  /** The hatch opens and the aliens come out to dance. `short` is the quick one between song joins. */
+  _surprise(short = false) {
     const st = this.stage, sp = st.sp, s = this.ship;
     this.phase = 'surprise';
     const kind = this.surpriseOrder[(this.surprises - 1) % this.surpriseOrder.length];
-    const count = this.surprises % 2 ? 3 : 2;
-    const bonus = 150 + 50 * this.notes.length;
-    if (!this.embedded?.text) this.app.ui.prompt(pick(['Surprise! The aliens loved that.', 'The aliens are coming out to say thanks!', 'You played it from memory. Party on the saucer!']));
+    const count = short ? 2 : this.surprises % 2 ? 3 : 2;
+    const bonus = 150 + 40 * Math.min(this.notes.length, 12);
+    const T = short ? { drop: 0.5, dance: 0.6, dur: 1.15, home: 1.8, loop: 2.3, bonus: 2.55, end: 3.1 }
+      : { drop: 1.0, dance: 1.15, dur: 1.95, home: 3.2, loop: 3.85, bonus: 4.25, end: 4.9 };
+    if (!this.embedded?.text) {
+      const song = this.songLevel && this._song();
+      this.app.ui.prompt(song && this.k + 1 >= this.plan.length ? `You played ${song.def.title} from memory. The aliens are throwing a party!`
+        : pick(['Surprise! The aliens loved that.', 'The aliens are coming out to say thanks!', 'You played it from memory. Party on the saucer!']));
+    }
     this._banner('Surprise!');
     this._windows('R', null, 'party');
     this._mouth('open');
@@ -868,18 +1202,18 @@ export class Game extends ArcadeBase {
     this.sfx.beam(0.7, false);
     this._beam(() => ({ x: s.px, y: st.staffTop, w: 6.6 * sp }), true, 0.2);
     this.aliens.forEach((a, i) => {
-      st.tween(0.62, (p) => { a.f = p; a.dy = -Math.sin(p * Math.PI) * 0.6; this._pose(a); }, { ease: ease.out, delay: 0.15 + i * 0.16 });
+      st.tween(short ? 0.5 : 0.62, (p) => { a.f = p; a.dy = -Math.sin(p * Math.PI) * 0.6; this._pose(a); }, { ease: ease.out, delay: 0.15 + i * 0.16 });
     });
-    this._after(1.0, () => this._beam(null, false, 0.3));
-    this._after(1.15, () => this._dance(kind));
-    this._after(3.2, () => this._aliensHome());
-    this._after(3.85, () => { this._hatch(false); this._loop(); });
-    this._after(4.25, () => {
+    this._after(T.drop, () => this._beam(null, false, 0.3));
+    this._after(T.dance, () => this._dance(kind, T.dur));
+    this._after(T.home, () => this._aliensHome());
+    this._after(T.loop, () => { this._hatch(false); this._loop(short ? 0.8 : 1.05); });
+    this._after(T.bonus, () => {
       this.score += bonus;
       st.float(s.px, s.py - 2.4 * this.u, `+${bonus}`, 'ar-float al-bonus');
       this._hud();
     });
-    this._after(4.9, () => this._mouth('smile'));
+    this._after(T.end, () => this._mouth('smile'));
   }
 
   _alienArt(color) {
@@ -927,24 +1261,25 @@ export class Game extends ArcadeBase {
     a.arms[1].setAttribute('transform', `rotate(${(-a.armR).toFixed(1)} 0.52 -0.62)`);
   }
 
-  _dance(kind) {
+  _dance(kind, dur = 1.95) {
     const st = this.stage, al = this.aliens;
     if (kind === 'hop') {
       // the aliens hop in turn and replay the phrase, an octave up
-      const tune = this.notes.map((n) => n.midi + 12);
-      tune.forEach((m, j) => this._after(j * 0.24, () => {
+      const step = dur < 1.5 ? 0.17 : 0.24;
+      const tune = this.notes.slice(0, Math.max(3, Math.floor((dur - 0.3) / step))).map((n) => n.midi + 12);
+      tune.forEach((m, j) => this._after(j * step, () => {
         const a = al[j % al.length];
-        this.app.sound.play(m, 0.6, undefined, 0.32);
-        st.tween(0.24, (p) => { a.dy = -Math.sin(p * Math.PI) * 0.9; a.armL = a.armR = 70 * Math.sin(p * Math.PI); this._pose(a); });
+        this.app.sound.play(m, 0.6, undefined, 0.3);
+        st.tween(step, (p) => { a.dy = -Math.sin(p * Math.PI) * 0.9; a.armL = a.armR = 70 * Math.sin(p * Math.PI); this._pose(a); });
       }));
-      this._after(tune.length * 0.24 + 0.05, () => {
+      this._after(tune.length * step + 0.05, () => {
         this.sfx.bell();
         al.forEach((a) => st.tween(0.4, (p) => { a.dy = -Math.sin(p * Math.PI) * 1.4; a.armL = a.armR = 120 * Math.sin(p * Math.PI); this._pose(a); }));
       });
     } else if (kind === 'spin') {
       // a conga line that spins as it shuffles, to the phrase as a fanfare
-      this.sfx.fanfare(this.notes.map((n) => n.midi + 12), 0.12);
-      st.tween(1.95, (p) => al.forEach((a, i) => {
+      this.sfx.fanfare(this.notes.slice(0, 8).map((n) => n.midi + 12), 0.12);
+      st.tween(dur, (p) => al.forEach((a, i) => {
         a.sx = Math.cos(p * Math.PI * 4 + i * 0.6);
         a.dx = Math.sin(p * Math.PI * 2) * 1.3;
         a.dy = -Math.abs(Math.sin(p * Math.PI * 8 + i)) * 0.25;
@@ -954,8 +1289,8 @@ export class Game extends ArcadeBase {
     } else {
       // everybody waves
       this.sfx.fanfare([72, 76, 79, 84]);
-      st.tween(1.95, (p) => al.forEach((a, i) => {
-        const t = p * 1.95;
+      st.tween(dur, (p) => al.forEach((a, i) => {
+        const t = p * dur;
         a.armL = 30 + 70 * Math.max(0, Math.sin(t * 11 + i * 1.3));
         a.armR = 30 + 70 * Math.max(0, Math.sin(t * 11 + i * 1.3 + Math.PI));
         a.dy = -Math.abs(Math.sin(t * 6 + i)) * 0.3;
@@ -980,11 +1315,11 @@ export class Game extends ArcadeBase {
   }
 
   /** A loop-the-loop, trailing sparkles. */
-  _loop() {
+  _loop(dur = 1.05) {
     const st = this.stage, s = this.ship, sp = st.sp, dir = pick([-1, 1]);
     this.sfx.whoosh();
     let last = 0;
-    st.tween(1.05, (p) => {
+    st.tween(dur, (p) => {
       const ph = p * Math.PI * 2;
       s.offX = Math.sin(ph) * 2.4 * sp * dir;
       s.offY = (1 - Math.cos(ph)) * 1.3 * sp;
@@ -1006,7 +1341,7 @@ export class Game extends ArcadeBase {
   }
 
   // ---------- banner and HUD ----------
-  /** Lowest point of the phrase on the staff: noteheads, down-stems, and the triangle row under them. */
+  /** Lowest point of the chunk on the staff: noteheads, down-stems, and the triangle row under them. */
   _lowest() {
     const st = this.stage, sp = st.sp, size = Math.max(sp, 13);
     let y = st.staffBottom;
@@ -1055,19 +1390,46 @@ export class Game extends ArcadeBase {
       return t;
     };
     label(st.left + sp, 'start', 'SCORE', this.score.toLocaleString());
-    if (this.k >= 0) label(st.right - sp, 'end', 'PHRASE', `${this.k + 1} of ${this.phrases.length}`);
-    // centre: listening, or one pip per copy
-    const cx = st.w / 2;
-    if (this.phase === 'demo') { label(cx, 'middle', 'LISTEN', ''); return; }
     if (this.k < 0) return;
+    const cx = st.w / 2;
+    if (this.songLevel) {
+      const s = this._song(), c = this.cur;
+      if (c.kind === 'new') label(st.right - sp, 'end', 'PHRASE', `${c.from + 1} of ${s.phrases.length}`);
+      else if (c.kind === 'join') label(st.right - sp, 'end', 'PHRASES', `${c.from + 1}–${c.to + 1}`);
+      else label(st.right - sp, 'end', 'WHOLE SONG', '');
+      this._strip(g, cx, y, fs);
+      return;
+    }
+    label(st.right - sp, 'end', 'PHRASE', `${this.k + 1} of ${this.plan.length}`);
+    // centre: listening, or one pip per copy
+    if (this.phase === 'demo') { label(cx, 'middle', 'LISTEN', ''); return; }
     const r = Math.max(4, 0.36 * fs);
     const gap = r * 3;
-    const x0 = cx - ((this.reps - 1) * gap) / 2 + fs * 1.6;
+    const n = this.helps.length;
+    const x0 = cx - ((n - 1) * gap) / 2 + fs * 1.6;
     label(x0 - r * 2.2, 'end', 'COPY', '');
-    for (let i = 0; i < this.reps; i++) {
+    for (let i = 0; i < n; i++) {
       const done = i < this.rep || (i === this.rep && this.phase !== 'turn' && this.phase !== 'timeup') || this.phase === 'collect' || this.phase === 'surprise';
       const cur = i === this.rep && (this.phase === 'turn' || this.phase === 'timeup');
       svg('circle', { cx: x0 + i * gap, cy: y, r, class: `al-pip${done ? ' done' : cur ? ' cur' : ''}` }, g);
+    }
+  }
+
+  /** The song's bars as a strip: learned from memory (mint), in play now (brass), still to come. */
+  _strip(g, cx, y, fs) {
+    const s = this._song(), st = this.stage;
+    const bars = s.toBar - s.fromBar + 1;
+    const learned = this._learnedBars();
+    const now = new Set(this.notes.map((n) => n.bar));
+    const w = Math.min(st.w * (st.w < 520 ? 0.34 : 0.4), bars * 14);
+    const seg = w / bars, hh = Math.max(5, fs * 0.45), x0 = cx - w / 2;
+    for (let i = 0; i < bars; i++) {
+      const b = s.fromBar + i;
+      svg('rect', {
+        x: (x0 + i * seg + (seg > 4 ? 1 : 0.5)).toFixed(1), y: (y - hh / 2).toFixed(1),
+        width: Math.max(1.5, seg - (seg > 4 ? 2 : 1)).toFixed(1), height: hh.toFixed(1), rx: Math.min(2, seg / 4).toFixed(1),
+        class: `al-seg${!s.noteBars.has(b) ? ' rest' : now.has(b) && this.phase !== 'collect' && this.phase !== 'surprise' ? ' cur' : learned.has(b) ? ' done' : ''}`,
+      }, g);
     }
   }
 
@@ -1102,15 +1464,40 @@ export class Game extends ArcadeBase {
     this.ship.anchor = 'away';
     this.hudG && (this.hudG.textContent = '');
     const total = Math.max(1, this.done);
-    const acc = this.right / total;
+    const acc = this.done ? this.right / total : 0;
     if (!stopped && acc >= 0.9) this.sfx.fanfare();
+    const passed = this.done > 0 && acc >= (this.embedded?.pass ?? 0.7);
+    const rightStat = ['Right first time', `${this.right} of ${this.done}${this.done ? ` (${Math.round(acc * 100)}%)` : ''}`];
+    const surpriseStat = this.surpriseChances ? [['Alien surprises', `${this.surprises} of ${this.surpriseChances}`]] : [];
+    if (this.songLevel && this._song()?.phrases.length) {
+      const s = this._song(), title = s.def.title;
+      const bars = s.noteBars.size, learnedBars = this._learnedBars();
+      const part = s.whole ? '' : `, ${this._bars(s.fromBar, s.toBar)}`;
+      let worst = -1;
+      this.phraseErr.forEach((e, i) => { if (e && (worst < 0 || e > this.phraseErr[worst])) worst = i; });
+      const wp = worst >= 0 ? s.phrases[worst] : null;
+      const work = wp ? `Phrase ${worst + 1}, ${this._bars(wp.fromBar, wp.toBar)} (${this.phraseErr[worst]} slip${this.phraseErr[worst] > 1 ? 's' : ''})` : 'None, a clean run';
+      const all = learnedBars.size >= bars;
+      this.finish({
+        score: this.score, passed, accuracy: acc,
+        detail: `${title}${part}${s.hand === 'L' ? ' (left hand)' : ''}: ${all ? 'every bar' : `${learnedBars.size} of ${bars} bars`} learned from memory.${wp ? ` Work on phrase ${worst + 1} (${this._bars(wp.fromBar, wp.toBar)}) next.` : all ? ' Now play it for real!' : ''}`,
+        stats: [
+          ['Song', `${title}${part}${s.hand === 'L' ? ', left hand' : ''}`],
+          ['Learned from memory', `${learnedBars.size} of ${bars} bars`],
+          rightStat,
+          ['Needed the most help', work],
+          ...surpriseStat,
+          ...(this.timeouts ? [['Ran out of time', String(this.timeouts)]] : []),
+        ],
+      });
+      return;
+    }
     this.finish({
-      score: this.score,
-      passed: this.done > 0 && acc >= (this.embedded?.pass ?? 0.7),
+      score: this.score, passed, accuracy: acc,
       detail: `${this.right} of ${this.done} notes right first time${this.surprises ? `, and ${this.surprises} alien surprise${this.surprises > 1 ? 's' : ''}` : ''}.`,
       stats: [
-        ['Right first time', `${this.right} of ${this.done}${this.done ? ` (${Math.round(acc * 100)}%)` : ''}`],
-        ...(this.phrasesDone ? [['Alien surprises', `${this.surprises} of ${this.phrasesDone}`]] : []),
+        rightStat,
+        ...surpriseStat,
         ['Wrong notes', String(this.errors)],
         ...(this.timeouts ? [['Ran out of time', String(this.timeouts)]] : []),
       ],

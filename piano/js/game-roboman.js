@@ -3,10 +3,10 @@
 // path: tap any key right on the note to grab one and refuel. Long notes are gaps in the walkway:
 // press on the note and hold it for its full value while Roboman builds a bridge under his treads.
 // Rests are solid floor, and presses there burn fuel. A fall costs a chance and sends him back to
-// the start of that bar, with his fuel as it was.
+// the start of that bar, with his fuel as it was. Song mode walks through a whole song's rhythm a
+// few bars at a time, with a checkpoint between sections that refuels him and adjusts the tempo.
 import { ArcadeBase, svg, rand, pick, ease, clamp, PAINT } from './arcade.js';
 import { parseVoice, buildScore } from './theory.js';
-import { catalog } from './catalog.js';
 import { h } from './ui.js';
 
 const PERFECT = 0.06, GOOD = 0.11, WINDOW = 0.18;   // seconds either side of a note's start
@@ -35,6 +35,18 @@ const RB = { brass: '#d9a93a', brassD: '#b4861f', chalk: '#e8ede3', chalkD: '#b9
 
 const valueKey = (d) => VALUES.reduce((a, v) => (Math.abs(v - d) < Math.abs(a - d) ? v : a), VALUES[0]);
 const plural = (n, w) => `${+n.toFixed(1)} ${w}${Math.abs(n - 1) < 0.05 ? '' : 's'}`;
+
+/** ['5', '6', '9'] -> "in bars 5–6 and 9" (bar 0 is a pickup). */
+function barList(labels) {
+  const nums = [...new Set(labels.map(Number))].filter((n) => !Number.isNaN(n)).sort((a, b) => a - b);
+  const parts = [];
+  for (const n of nums) { const last = parts[parts.length - 1]; if (last && n === last[1] + 1) last[1] = n; else parts.push([n, n]); }
+  if (!parts.length) return '';
+  if (parts.length === 1 && parts[0][0] === parts[0][1]) return parts[0][0] === 0 ? 'in the pickup' : `in bar ${parts[0][0]}`;
+  const txt = parts.slice(0, 4).map(([a, b]) => (a === b ? String(a) : `${a}–${b}`));
+  if (parts.length > 4) return `in bars ${txt.join(', ')} and elsewhere`;
+  return `in bars ${txt.length > 1 ? `${txt.slice(0, -1).join(', ')} and ${txt[txt.length - 1]}` : txt[0]}`;
+}
 
 /** A small seeded random generator, so the scenery stays put when the stage is redrawn. */
 function rng(seed) {
@@ -125,7 +137,7 @@ function spellTokens(tokens, bpb, compound) {
       pieces.push({ t, d: v });
       t += v;
     }
-    pieces.forEach((pc, i) => out.push(tk.rest ? { ...pc, rest: true }
+    pieces.forEach((pc, i) => out.push(tk.rest ? { ...pc, rest: true, pad: !!tk.pad }
       : { ...pc, rest: false, tied: i > 0 || !!tk.tied, tieNext: i < pieces.length - 1 || !!tk.tieNext }));
   }
   return out;
@@ -135,18 +147,21 @@ function spellTokens(tokens, bpb, compound) {
  * Build a course: drawable tokens, the notes Roboman meets (plugs and gaps), rests and the fuel
  * economy. Notes no longer than plugMax beats are plugs; longer ones are gaps to bridge.
  */
-function makeCourse({ tokens: raw, length }, time, { plugMax = 1, title = '', tempo = null } = {}) {
+function makeCourse({ tokens: raw, length }, time, { plugMax = 1, sections = null, barMap = null, barLabel = (b) => String(b + 1), ...extra } = {}) {
   const bpb = (time[0] * 4) / time[1];
   const compound = time[1] === 8 && time[0] % 3 === 0 && time[0] > 3;
   const unit = 4 / time[1];
   const tokens = spellTokens(fillGaps(raw, length), bpb, compound);
-  const notes = [], rests = [];
+  const notes = [], rests = [], pads = [];
+  const merge = (list, tk) => {
+    const last = list[list.length - 1];
+    if (last && Math.abs(last.t + last.d - tk.t) < eps) last.d += tk.d; else list.push({ t: tk.t, d: tk.d });
+  };
   let cur = null;
   tokens.forEach((tk, k) => {
     if (tk.rest) {
       cur = null;
-      const last = rests[rests.length - 1];
-      if (last && Math.abs(last.t + last.d - tk.t) < eps) last.d += tk.d; else rests.push({ t: tk.t, d: tk.d });
+      merge(tk.pad ? pads : rests, tk);   // pads (a pickup's silent start, a checkpoint bar) are counted, not rests
       return;
     }
     if (tk.tied && cur && cur.open) { cur.d += tk.d; cur.toks.push(k); }
@@ -154,26 +169,87 @@ function makeCourse({ tokens: raw, length }, time, { plugMax = 1, title = '', te
     cur.open = tk.tieNext;
     tk.note = cur.i;
   });
+  const bars = Math.round(length / bpb);
+  barMap ||= Array.from({ length: bars }, (_, i) => i);
   for (const n of notes) {
     n.end = n.t + n.d;
     n.kind = n.d > plugMax + eps ? 'bridge' : 'plug';
     n.bar = Math.floor(n.t / bpb + 1e-6);
+    n.label = barLabel(barMap[n.bar] ?? n.bar);
     delete n.open;
   }
   let minIOI = 4;
   for (let i = 1; i < notes.length; i++) minIOI = Math.min(minIOI, notes[i].t - notes[i - 1].t);
   const perBar = Math.round(bpb / unit);
-  const span = notes.filter((n) => n.kind === 'bridge').reduce((a, n) => a + n.d, 0);
-  const plugs = notes.filter((n) => n.kind === 'plug').length;
+  // fuel: a clean run with no plugs grabbed would end nearly dry, and each plug tops the tank up.
+  // Song sections refuel at each checkpoint, so they burn more gently: a fall replays bars there.
+  const song = !!sections;
+  sections ||= [{ start: 0, end: length, from: barMap[0], to: barMap[bars - 1] }];
+  sections.forEach((sec, i) => {
+    const ns = notes.filter((n) => n.t >= sec.start - eps && n.t < sec.end - eps);
+    const span = Math.max(ns.filter((n) => n.kind === 'bridge').reduce((a, n) => a + n.d, 0), song ? 2 * bpb : 0);
+    const plugs = ns.filter((n) => n.kind === 'plug').length;
+    const burn = span ? (song ? (plugs ? 66 : 50) : (plugs ? 88 : 62)) / span : 0, gain = plugs ? clamp(70 / plugs, 5, 30) : 0;
+    for (const n of ns) Object.assign(n, { sec: i, burn, gain });
+    sec.cp = sec.end + Math.min(0.6, 0.8 * unit);   // where the checkpoint gate stands
+  });
   return {
     time, bpb, unit, compound, group: time[1] === 8 ? 1.5 : 1, perBar,
     countIn: bpb * Math.max(1, Math.ceil(3 / perBar - eps)),
-    length, bars: Math.round(length / bpb), tokens, notes, rests, minIOI, title, tempo,
-    // a clean run with no plugs grabbed would end nearly dry; each plug tops the tank up
-    burn: span ? (plugs ? 88 : 62) / span : 0,
-    gain: plugs ? clamp(70 / plugs, 5, 30) : 0,
-    seed: Math.floor(Math.random() * 1e9),
+    length, bars, tokens, notes, rests, pads, minIOI, sections, barMap, barLabel,
+    seed: Math.floor(Math.random() * 1e9), ...extra,
   };
+}
+
+/** Bars per section in song mode: four of 4/4, fewer long bars, more short ones. */
+const sectionBars = (bpb) => (bpb >= 6 ? 2 : bpb <= 2 ? 8 : 4);
+
+/**
+ * Song mode: one hand's rhythm through a whole song, or bars fromBar..toBar (0-based, as songBar
+ * counts them: a pickup is bar 0). Sections of a few bars, with a one-bar checkpoint stop between
+ * them; the pickup rides with the first section. A range shorter than four bars repeats.
+ */
+function songCourse(def, hand, { fromBar, toBar, plugMax }) {
+  const sc = buildScore(def);
+  const bpb = sc.bpb;
+  const used = scoreTokens(sc, hand) ? hand : hand === 'R' ? 'L' : 'R';
+  const toks = scoreTokens(sc, used);
+  if (!toks) return null;
+  const pickup = sc.pickup > eps && sc.pickup < bpb - eps;
+  const whole = wholeBars(fillGaps(toks, sc.length), sc.length, sc.pickup, bpb);
+  if (pickup && whole.tokens[0]?.rest) whole.tokens[0].pad = true;   // the silent start of the pickup bar
+  const nb = Math.round(whole.length / bpb);
+  const a = clamp(Math.round(fromBar ?? 0), 0, nb - 1), b = clamp(Math.round(toBar ?? nb - 1), a, nb - 1);
+  const S = sectionBars(bpb);
+  let ranges = [];
+  for (let s0 = a; s0 <= b;) {
+    const e = Math.min(b, s0 + (pickup && s0 === 0 ? S : S - 1));
+    ranges.push([s0, e]);
+    s0 = e + 1;
+  }
+  const tail = ranges[ranges.length - 1];
+  if (ranges.length > 1 && tail[0] === tail[1]) { ranges.pop(); ranges[ranges.length - 1][1] = tail[1]; }
+  const full = b - a + 1 - (pickup && a === 0 ? 1 : 0);
+  if (ranges.length === 1 && full < 4) ranges = Array.from({ length: clamp(Math.ceil(4 / Math.max(1, full)), 2, 4) }, () => [a, b]);
+  const tokens = [], barMap = [], sections = [];
+  let at = 0;
+  ranges.forEach(([s0, e], i) => {
+    if (i) { tokens.push({ t: at, d: bpb, rest: true, pad: true }); barMap.push(-1); at += bpb; }
+    const start = at, endT = (e + 1) * bpb;
+    for (const tk of whole.tokens) {
+      const bar = Math.floor(tk.t / bpb + 1e-6);
+      if (bar >= s0 && bar <= e) tokens.push({ ...tk, t: tk.t - s0 * bpb + at, d: Math.min(tk.d, endT - tk.t) });
+    }
+    for (let k = s0; k <= e; k++) barMap.push(k);
+    at += (e - s0 + 1) * bpb;
+    sections.push({ start, end: at, from: s0, to: e, again: ranges.slice(0, i).some(([p, q]) => p === s0 && q === e) });
+  });
+  // bars as a printed score numbers them: a pickup is bar 0, the first full bar is bar 1
+  const barLabel = (bar) => String(pickup ? bar : bar + 1);
+  return makeCourse({ tokens, length: at }, sc.time, {
+    plugMax, sections, barMap, barLabel, title: def.title, hand: used, song: def.id,
+    songTempo: sc.tempo, firstBar: a, lastBar: b, songBars: nb, pickup,
+  });
 }
 
 /** Rhythm tokens for one hand of a score (buildScore or coach excerpt); null if it has no notes. */
@@ -187,6 +263,7 @@ export const GAME = {
   id: 'roboman', title: 'Roboman',
   summary: 'The rhythm factory. Tap the short notes to grab power plugs and hold the long ones to build bridges, right in time.',
   how: 'Tap any key on a short note to grab a power plug. Press a long note as Roboman reaches the gap and hold it for its full value to build a bridge. In rests, keep still: stray presses burn fuel.',
+  songHow: 'The whole song’s rhythm, a few bars at a time: tap the short notes, hold the long ones for their full value. Each checkpoint refuels Roboman and gives back his chances.',
   skill: 'rhythm',
   levels: [
     { name: 'Quarters and halves', time: [4, 4], tempo: 80, first: ['q q q q', 'h h'], pool: ['q q q q', 'h h', 'q q h', 'h q q', 'q h q'], focus: ['q q h', 'h q q', 'q h q'], last: ['h h'] },
@@ -196,7 +273,7 @@ export const GAME = {
     { name: 'Dotted quarter and eighth', time: [4, 4], tempo: 80, first: ['q q h'], pool: ['q. e q q', 'q. e h', 'q q q. e', 'h q. e', 'q. e q. e', 'q q h'], focus: ['q. e q q', 'q. e h', 'q. e q. e'], last: ['w'] },
     { name: 'Ties and syncopation', time: [4, 4], tempo: 76, first: ['q q h'], pool: ['e q e q q', 'q e q e q', 'e q q q e', 'h~ e e q', 'q q~ q q', 'e q e h', 'q h q', 'q q h~ | q q h'], focus: ['e q e q q', 'q q~ q q', 'q q h~ | q q h', 'h~ e e q'], last: ['w'] },
     { name: '6/8 time', time: [6, 8], tempo: 84, first: ['q. q.'], pool: ['q. q.', 'q e q e', 'e e e q.', 'q. e e e', 'e e e e e e', 'q e q.', 'q. q e', 'q. rq.'], focus: ['q e q e', 'e e e q.', 'q. e e e'], last: ['h.'] },
-    { name: 'Rhythm of a song', song: true, time: [4, 4], tempo: 90 },
+    { name: 'Rhythm of a song', song: true },
   ],
 };
 
@@ -205,7 +282,9 @@ export const GAME = {
  *   rhythm: a voice string, pitches ignored ('C4q C4q C4h | C4w'); looped or cut to `bars`
  *   score + hands: a score from buildScore() or coach excerpt(); that hand's onsets and durations
  *          (chords count once, gaps are rests). Short excerpts loop to make at least 4 bars.
- *   time [4, 4], tempo (quarter notes per minute), bars (course length; default 4),
+ *   song + hands ('R' | 'L') + fromBar/toBar (0-based, inclusive): song mode on a catalog song,
+ *          section by section with checkpoints, starting at 0.8 of the song's tempo
+ *   time [4, 4], tempo (quarter notes per minute; fixes the tempo), bars (course length; default 4),
  *   plugMax (notes this many beats or shorter are plugs; default 1), chances (3), pass (0.7), text.
  */
 export class Game extends ArcadeBase {
@@ -227,7 +306,7 @@ export class Game extends ArcadeBase {
   }
 
   // ---------- courses ----------
-  _makeCourse() {
+  _makeCourse(demo) {
     const lv = this.lv, emb = this.embedded || {};
     const plugMax = lv.plugMax ?? 1;
     const bars = emb.bars ?? (this.embedded ? 4 : 8);
@@ -245,7 +324,7 @@ export class Game extends ArcadeBase {
       else if (nb < 4) part = loopBars(part, Math.ceil(4 / nb));
       return makeCourse(part, time, { plugMax });
     }
-    if (lv.song) return this._songCourse(bars, plugMax);
+    if (lv.song) return this._songCourse(plugMax, demo);
     return this._genCourse(lv, bars, plugMax);
   }
 
@@ -286,33 +365,23 @@ export class Game extends ArcadeBase {
     return makeCourse(part, time, { plugMax, tempo });
   }
 
-  /** Level 8: the right-hand rhythm of a song the learner has played (or a well-known tune). */
-  _songCourse(n, plugMax) {
-    const ok = (s) => s && s.rh;
-    if (!ok(catalog.song(this.songId))) {
-      const played = Object.keys(this.app.store.data.songs || {}).map((id) => catalog.song(id)).filter(ok);
-      const fall = ['ode-to-joy', 'korobeiniki', 'twinkle'].map((id) => catalog.song(id)).filter(ok);
-      this.songId = pick(played.length ? played : fall)?.id;
-    }
-    const song = catalog.song(this.songId);
-    if (!song) return this._genCourse(GAME.levels[0], n, plugMax);
-    const sc = buildScore({ ...song, lh: '' });
-    const bpb = sc.bpb;
-    const part = cutBars(wholeBars(fillGaps(scoreTokens(sc, 'R'), sc.length), sc.length, sc.pickup, bpb), n, bpb);
-    return makeCourse(part, sc.time, { plugMax, title: song.title, tempo: clamp(Math.round(sc.tempo * 0.85), 64, 100) });
+  /** Song mode: the kit's song and hand, the whole song or fromBar..toBar ("Continue" resumes a section). */
+  _songCourse(plugMax, demo) {
+    const def = this.songDef, emb = this.embedded || {};
+    const fromBar = !demo && this.resumeBar != null ? this.resumeBar : emb.fromBar;
+    const c = def && songCourse(def, this.lv.hands || 'R', { fromBar, toBar: emb.toBar, plugMax });
+    return c || this._genCourse(GAME.levels[0], 8, plugMax);
   }
 
   // ---------- round ----------
   _setup(demo) {
-    const c = this.course = this._makeCourse();
+    const c = this.course = this._makeCourse(demo);
     this.demo = demo;
-    this.tempo = this.embedded?.tempo || c.tempo || this.lv.tempo || 80;
-    this.spb = 60 / this.tempo;
-    // timing windows shrink for close-packed notes so neighbours never overlap
-    this.win = Math.min(WINDOW, 0.45 * c.minIOI * this.spb);
-    this.good = Math.min(GOOD, this.win * 0.8);
-    this.perfect = Math.min(PERFECT, this.good * 0.6);
-    this.late = Math.max(this.win, Math.min(0.32, 0.45 * this.spb));
+    // songs start at 0.8 of their tempo and move a notch up or down at each checkpoint
+    this.adapt = !!c.songTempo && !this.embedded?.tempo;
+    this.factor = 0.8;
+    this.tempo = this.embedded?.tempo || (c.songTempo ? this._songTempo() : c.tempo || this.lv.tempo || 80);
+    this._windows();
     for (const n of c.notes) this._clearNote(n);
     this.from = 0;
     this.idle = -c.countIn;
@@ -330,9 +399,25 @@ export class Game extends ArcadeBase {
     this.pendingMiss = null;
     this.earlyFor = null;
     this.statusMsg = '';
+    this.statusShown = null;
+    this.secIdx = 0;
+    this.sec = { falls: 0, notes: 0, onBeat: 0 };
+    this.problems = [];
+    this.tip = '';
     this.lastPress = -9;
     this.anim = 0;
     this._build();
+  }
+
+  _songTempo() { return clamp(Math.round(this.course.songTempo * this.factor), 44, 160); }
+
+  /** Timing windows in seconds; they shrink for close-packed notes so neighbours never overlap. */
+  _windows() {
+    this.spb = 60 / this.tempo;
+    this.win = Math.min(WINDOW, 0.45 * this.course.minIOI * this.spb);
+    this.good = Math.min(GOOD, this.win * 0.8);
+    this.perfect = Math.min(PERFECT, this.good * 0.6);
+    this.late = Math.max(this.win, Math.min(0.32, 0.45 * this.spb));
   }
 
   _clearNote(n) {
@@ -345,19 +430,22 @@ export class Game extends ArcadeBase {
     this.mode = 'attract';
     this.t0 = performance.now() / 1000 + 0.8 - this.idle * this.spb;
     this.lastClick = null;
-    if (this.lv.song && this.course.title) this.app.ui.prompt(`This level uses the right-hand rhythm of ${this.course.title}, pitches left out.`);
+    const c = this.course;
+    if (c.song) this.app.ui.prompt(`The ${c.hand === 'L' ? 'left' : 'right'}-hand rhythm of ${c.title}, bars ${this._range(c.firstBar, c.lastBar)}, a few bars at a time, pitches left out.`);
   }
 
   start() {
     this.reset();
     this._setup(false);
+    this.resumeBar = null;
     this.mode = 'ready';
     this.readyT = 0.45;
     this.playing = true;
     this.app.keyboard.need(60, 72);
     const c = this.course;
-    this.app.ui.prompt(this.embedded?.text || (c.title
-      ? `${c.title}, right-hand rhythm: tap the short notes, hold the long ones for their full value.`
+    const S = sectionBars(c.bpb);
+    this.app.ui.prompt(this.embedded?.text || (c.song
+      ? `${this._songName()}: its rhythm, ${S} bars at a time. Tap the short notes, hold the long ones for their full value.`
       : 'Tap the short notes to grab plugs. Hold the long notes for their full value to build bridges. In rests, keep still.'));
     this.app.ui.foot(h('button', { class: 'btn', onclick: () => this._end('stopped') }, 'Stop'));
     this._hud();
@@ -378,6 +466,20 @@ export class Game extends ArcadeBase {
     this.attempt++;
     this.mode = 'run';
     this._hud();
+  }
+
+  _songName() { const c = this.course; return `${c.title}${c.hand === 'L' ? ', left hand' : ''}`; }
+  /** "5–8" for song bars a..b, in printed numbering (a pickup is folded into bar 1). */
+  _range(a, b) {
+    const c = this.course, lo = c.barLabel(a) === '0' ? c.barLabel(a + 1) : c.barLabel(a), hi = c.barLabel(Math.max(a + (lo !== c.barLabel(a) ? 1 : 0), b));
+    return lo === hi ? lo : `${lo}–${hi}`;
+  }
+  /** Printed bar number at a course beat (a checkpoint bar counts as the bar after it). */
+  _barAt(beat) {
+    const c = this.course;
+    let i = clamp(Math.floor(beat / c.bpb + 1e-6), 0, c.bars - 1);
+    while (i < c.bars - 1 && c.barMap[i] < 0) i++;
+    return c.barLabel(c.barMap[i]);
   }
 
   now() { return this.audioClock ? this.app.sound.now() : performance.now() / 1000; }
@@ -409,14 +511,52 @@ export class Game extends ArcadeBase {
     this.rob.beat = rb;
     this.cam = rb;
     this._clicks(now);
-    this._pulse(vb);
+    if (this._pulse(vb)) this._hud();
     this._grow(rb);
     if (this.mode !== 'run') return;
     this._misses(rb);
     this._support(rb);
     if (this.mode !== 'run') return;
     while (this.ptr < c.notes.length && this._resolved(c.notes[this.ptr])) this.ptr++;
+    const sec = c.sections[this.secIdx];
+    if (this.secIdx < c.sections.length - 1 && rb >= sec.cp && !c.notes.some((n) => n.sec === this.secIdx && !this._resolved(n))) this._checkpoint();
     if (rb >= c.length - eps && this.ptr >= c.notes.length) this._done();
+  }
+
+  /** Past a section: refuel, chances back, and a tempo notch up after a clean section (down after a rough one). */
+  _checkpoint() {
+    const c = this.course, st = this.stage, s = this.sec;
+    const done = c.sections[this.secIdx], next = c.sections[++this.secIdx];
+    let note = '';
+    if (this.adapt) {
+      const f0 = this.factor, acc = s.notes ? s.onBeat / s.notes : 1;
+      if (!s.falls && acc >= 0.85) this.factor = Math.min(1, this.factor + 0.05);
+      else if (s.falls >= 2 || acc < 0.6) this.factor = Math.max(0.7, this.factor - 0.05);
+      if (this.factor !== f0) {
+        this._retime(this._songTempo());
+        note = this.factor > f0 ? `, faster: ${this.tempo} bpm` : `, slower: ${this.tempo} bpm`;
+      }
+    }
+    this.sec = { falls: 0, notes: 0, onBeat: 0 };
+    this.chances = this.lv.chances ?? CHANCES;
+    this.rob.lowWarned = false;
+    const f0 = this.fuel;
+    st.tween(0.8, (p) => { this.fuel = f0 + (100 - f0) * p; });
+    this.gateEls?.[this.secIdx - 1]?.classList.add('on');
+    if (!this.demo) {
+      this.sfx.bell();
+      this._say(`bars ${this._range(done.from, done.to)} done`, 'perfect');
+      this.statusMsg = `Next: bars ${this._range(next.from, next.to)}${next.again ? ' again' : ''}${note}`;
+      this._hud();
+    }
+  }
+
+  /** Change tempo mid-run without a jump: the current beat stays where it is. */
+  _retime(tempo) {
+    const now = this.now(), vb = this.beatAt(now);
+    this.tempo = tempo;
+    this._windows();
+    this.t0 = now - this.lat - vb * this.spb;
   }
 
   _attractStep() {
@@ -432,11 +572,13 @@ export class Game extends ArcadeBase {
     }
     this._grow(rb);
     while (this.ptr < c.notes.length && this._resolved(c.notes[this.ptr])) this.ptr++;
+    if (this.secIdx < c.sections.length - 1 && rb >= c.sections[this.secIdx].cp) this._checkpoint();
     if (rb > c.length + DOCK + 2.5) {
       // loop the demo
       for (const n of c.notes) this._clearNote(n);
       this._paintTokens();
-      this.ptr = 0; this.fuel = 100;
+      this.ptr = 0; this.fuel = 100; this.secIdx = 0;
+      this.gateEls?.forEach((el) => el.classList.remove('on'));
       this.t0 = performance.now() / 1000 + 0.6 - this.idle * this.spb;
       this.lastClick = null;
     }
@@ -448,7 +590,8 @@ export class Game extends ArcadeBase {
   /** Metronome: schedule clicks a little ahead on the audio clock. */
   _clicks(now) {
     const c = this.course, end = c.length - c.unit + eps;
-    while (this.clickBeat <= end && this.t0 + this.clickBeat * this.spb < now + 0.25) {
+    const gate = this.secIdx < c.sections.length - 1 ? c.sections[this.secIdx].cp : Infinity;
+    while (this.clickBeat <= end && this.clickBeat <= gate + eps && this.t0 + this.clickBeat * this.spb < now + 0.25) {
       const b = this.clickBeat, when = this.t0 + b * this.spb;
       const rel = b < this.from - eps ? b - this.idle : b;
       const down = Math.abs(rel / c.bpb - Math.round(rel / c.bpb)) < 1e-4;
@@ -461,14 +604,16 @@ export class Game extends ArcadeBase {
   _pulse(vb) {
     const c = this.course;
     const k = Math.floor((vb - this.idle) / c.unit + 1e-6);
-    if (k === this.lastClick) return;
+    if (k === this.lastClick) return false;
     this.lastClick = k;
-    if (k < 0) return;
+    if (k < 0) return false;
     const b = this.idle + k * c.unit;
     const main = !c.compound || Math.abs((b / 1.5) - Math.round(b / 1.5)) < 1e-4;
     this.rob.flash = main ? 1 : 0.5;
     this.rob.flashAt = this.anim;
-    if (b < this.from - eps && !this.demo) this._countFlash((k % c.perBar) + 1);
+    const inPad = c.pads.some((p) => b >= p.t - eps && b < p.t + p.d - eps);
+    if ((b < this.from - eps || inPad) && !this.demo) this._countFlash(Math.round((b - Math.floor(b / c.bpb + 1e-6) * c.bpb) / c.unit) + 1);
+    return true;
   }
 
   /** Bridges under construction grow with Roboman, burning fuel. */
@@ -476,10 +621,10 @@ export class Game extends ArcadeBase {
     for (const n of [...this.building]) {
       const end = Math.min(n.end, Math.max(n.t, rb));
       if (end > n.built + eps) {
-        this._burn((end - n.built) * this.course.burn);
+        this._burn((end - n.built) * n.burn);
         if (this.mode !== 'run' && this.mode !== 'attract') return;
         n.built = end;
-        if (rb >= n.t && this.anim - (n.sparkAt || 0) > 0.04) { n.sparkAt = this.anim; this._sparks(end * this.ppb, this.floorY + 0.15 * this.u, 4); }
+        if (rb >= n.t && this.anim - (n.sparkAt || 0) > 0.05) { n.sparkAt = this.anim; this._sparks(end * this.ppb, this.floorY + 0.15 * this.u, 3); }
       }
       if (rb >= n.end - eps) this._complete(n);
     }
@@ -493,6 +638,7 @@ export class Game extends ArcadeBase {
       if (n.kind !== 'plug' || n.state !== 'pending' || (rb - n.t) * this.spb <= this.late + SLACK) continue;
       n.state = 'missed';
       this._tally(n, 0);
+      this._problem('missed', n);
       this.streak = 0;
       this.app.coach.record('missed', { t: n.t });
       this._say('missed', 'bad');
@@ -533,7 +679,7 @@ export class Game extends ArcadeBase {
     }
     if (best) {
       this.lastPress = tIn;
-      this.app.keyboard.flash(e.midi, 'hit');
+      this._light(e.midi, 'hit');
       this._onset(best, bd, e.midi);
       return;
     }
@@ -557,13 +703,13 @@ export class Game extends ArcadeBase {
     n.grade = grade;
     n.ms = Math.round(d * 1000);
     if (this.demo) {
-      if (n.kind === 'plug') { this._fuel(this.course.gain); this._grab(n, true); }
+      if (n.kind === 'plug') { this._fuel(n.gain); this._grab(n, true); }
       else { n.building = true; this.building.add(n); this._paintNote(n, 'on'); }
       return;
     }
     const ok = grade === 'perfect' || grade === 'good';
     if (ok) this.app.coach.record('hit');
-    else this.app.coach.record(grade, { ms: n.ms, t: n.t });
+    else { this.app.coach.record(grade, { ms: n.ms, t: n.t }); this._problem(grade, n); }
     if (this.earlyFor?.n === n) this.earlyFor = null;
     this.statusMsg = '';
     this.streak = ok ? this.streak + 1 : 0;
@@ -574,7 +720,7 @@ export class Game extends ArcadeBase {
     if (n.kind === 'plug') {
       this._tally(n, ok ? 1 : 0.6);
       this.plugs++;
-      this._fuel(this.course.gain);
+      this._fuel(n.gain);
       this._grab(n);
     } else {
       n.building = true;
@@ -589,13 +735,14 @@ export class Game extends ArcadeBase {
   /** A press where no note starts: too early, in a rest, or just extra. All of them burn fuel. */
   _stray(midi, ib) {
     const c = this.course;
-    this.app.keyboard.flash(midi, 'miss', 450);
+    this._light(midi, 'miss', 450);
     // a plug that just went past: honest "late", and it swings away
     let prev = null;
     for (const n of c.notes) { if (n.t <= ib) prev = n; else break; }
     if (prev && prev.kind === 'plug' && prev.state === 'pending' && (ib - prev.t) * this.spb <= this.late + SLACK) {
       prev.state = 'late';
       this._tally(prev, 0.3);
+      this._problem('late', prev);
       this.streak = 0;
       this.app.coach.record('late', { ms: Math.round((ib - prev.t) * this.spb * 1000), t: prev.t });
       this._say('too late', 'late');
@@ -606,16 +753,20 @@ export class Game extends ArcadeBase {
     }
     const next = c.notes.find((n) => n.state === 'pending' && n.t > ib);
     const rest = c.rests.find((r) => ib >= r.t - 0.02 && ib < r.t + r.d - 0.02);
+    const counting = c.pads.some((p) => ib >= p.t - 0.02 && ib < p.t + p.d - 0.02);
+    if (counting && !(next && next.t - ib <= 0.6)) return;   // tapping along with the count is fine
     this.s.strays++;
     this.streak = 0;
     if (next && (next.t - ib) <= 0.6 && !(rest && next.t - ib > 0.35)) {
       const ms = Math.round((ib - next.t) * this.spb * 1000);
       this.app.coach.record('early', { ms, t: next.t });
       this.earlyFor = { n: next, ms };
+      this._problem('early', next);
       this._say('too early', 'early');
     } else if (rest) {
       this.s.rests++;
       this.app.coach.record('rest', { t: ib });
+      this._problem('rest', null, this._barAt(ib));
       this._say('rest!', 'bad');
     } else {
       this._say('extra', 'bad');
@@ -631,7 +782,7 @@ export class Game extends ArcadeBase {
     this.building.delete(n);
     n.building = false;
     if (rb >= n.end - this._grace(n)) {
-      if (n.end > n.built) this._burn((n.end - n.built) * this.course.burn);
+      if (n.end > n.built) this._burn((n.end - n.built) * n.burn);
       if (this.mode !== 'run') return;
       n.built = n.end;
       this._complete(n);
@@ -642,6 +793,7 @@ export class Game extends ArcadeBase {
       this.s.short++;
       this.streak = 0;
       this.app.coach.record('short', { ratio: Math.round(ratio * 100) / 100, t: n.t });
+      this._problem('short', n);
       this._tally(n, this._onsetCredit(n) * 0.4, true);
       this._say('held too short', 'bad');
       this._paintNote(n, 'miss');
@@ -670,9 +822,17 @@ export class Game extends ArcadeBase {
   _tally(n, credit, bridge = false, held = false) {
     this.s.notes++;
     this.s.credit += credit;
-    if (n.grade === 'perfect' || n.grade === 'good') this.s.onBeat++;
+    this.sec.notes++;
+    if (n.grade === 'perfect' || n.grade === 'good') { this.s.onBeat++; this.sec.onBeat++; }
     if (n.kind === 'plug') { this.s.plugTries++; if (credit > 0.5) this.s.plugs++; }
     if (bridge) { this.s.bridges++; if (held) this.s.held++; }
+  }
+
+  /** Remember what went wrong where, for the results: "held the half notes short in bars 5–6". */
+  _problem(type, n, bar = n?.label) {
+    if (this.demo) return;
+    const v = !n ? '' : n.toks.length > 1 ? 'tied notes' : `${NAMES[valueKey(n.d)] || 'note'}s`;
+    this.problems.push({ type, v, bar });
   }
 
   _fuel(add) { this.fuel = clamp(this.fuel + add, 0, 100); }
@@ -691,6 +851,7 @@ export class Game extends ArcadeBase {
     this.fallNote = n;
     this.chances--;
     this.s.falls++;
+    this.sec.falls++;
     this.streak = 0;
     this._stopHum();
     for (const b of this.building) b.building = false;
@@ -708,8 +869,9 @@ export class Game extends ArcadeBase {
       n.state = 'missed';
       this._paintNote(n, 'miss');
       this.pendingMiss = { n, until: this.now() + 0.4 };
+      this._problem('missed', n);
       this._say('missed', 'bad');
-      this.app.ui.prompt(`No key at the start of the ${name} on ${this._beatName(n.t)} of bar ${n.bar + 1}, so there was no bridge. Press just as Roboman reaches the gap.`);
+      this.app.ui.prompt(`No key at the start of the ${name} on ${this._beatName(n.t)} of bar ${n.label}, so there was no bridge. Press just as Roboman reaches the gap.`);
     } else {
       const held = (n.built - n.t) / c.unit, want = n.d / c.unit;
       this.app.ui.prompt(`You let go after ${plural(held, unitName)}, but the ${name} lasts ${plural(want, unitName)}. Keep the key down right up to the next note.`);
@@ -743,7 +905,9 @@ export class Game extends ArcadeBase {
     this.pendingMiss = null;
     const ms = Math.round((ib - pm.n.t) * this.spb * 1000);
     this.app.coach.record('late', { ms, t: pm.n.t });
-    this.app.keyboard.flash(e.midi, 'miss', 450);
+    const pi = this.problems.findLastIndex((q) => q.type === 'missed');
+    if (pi >= 0) this.problems[pi].type = 'late';
+    this._light(e.midi, 'miss', 450);
     this._tally(pm.n, 0, true);
     this._say('too late', 'late');
     this.app.ui.prompt(`Too late for the bridge, by ${ms} ms. The gap starts on ${this._beatName(pm.n.t)}: press right with the click.`);
@@ -783,7 +947,7 @@ export class Game extends ArcadeBase {
         });
       },
     });
-    this.statusMsg = `${this.chances} ${this.chances === 1 ? 'chance' : 'chances'} left. Back to bar ${Math.round(from / c.bpb) + 1}.`;
+    this.statusMsg = `${this.chances} ${this.chances === 1 ? 'chance' : 'chances'} left · from bar ${this._barAt(from)}`;
     this._hud();
   }
 
@@ -852,32 +1016,63 @@ export class Game extends ArcadeBase {
     const c = this.course, s = this.s;
     const acc = s.notes ? s.credit / (s.notes + s.strays) : 0;   // a stray press counts like a missed note
     if (done) this.score += 300 + this.chances * 150 + Math.round(this.fuel) * 3;
-    const bar = clamp(Math.floor(this.rob.beat / c.bpb + 1e-6) + 1, 1, c.bars);
+    const bar = this._barAt(this.rob.beat);
     const onBeat = s.notes ? `${s.onBeat} of ${s.notes} notes right on the beat.` : '';
-    const detail = {
-      done: `Roboman made it across${s.falls ? ` with ${s.falls} ${s.falls === 1 ? 'fall' : 'falls'}` : ' without a fall'}. ${onBeat}`,
-      fuel: `Roboman ran out of fuel in bar ${bar}. ${onBeat}`,
-      chances: `Out of chances in bar ${bar}. ${onBeat}`,
-      stopped: s.notes ? `Stopped in bar ${bar}. ${onBeat}` : 'Stopped before the first note.',
+    const falls = s.falls ? ` with ${s.falls} ${s.falls === 1 ? 'fall' : 'falls'}` : ' without a fall';
+    const who = c.song ? `${this._songName()}: ` : '';
+    let detail = {
+      done: c.song ? `${who}bars ${this._range(c.firstBar, c.lastBar)}${falls}. ${onBeat}` : `Roboman made it across${falls}. ${onBeat}`,
+      fuel: `${who}${c.song ? 'out' : 'Roboman ran out'} of fuel in bar ${bar}. ${onBeat}`,
+      chances: `${who}${c.song ? 'out' : 'Out'} of chances in bar ${bar}. ${onBeat}`,
+      stopped: s.notes ? `${who}${c.song ? 'stopped' : 'Stopped'} in bar ${bar}. ${onBeat}` : 'Stopped before the first note.',
     }[why].trim();
+    this.tip = this._shakyTip();
+    if (this.embedded && this.tip) detail += ` ${this.tip}`;
+    // short enough to fit the card on a phone: zero counts of trouble are left out
+    const stats = [
+      ['Notes on the beat', `${s.onBeat} of ${s.notes}`],
+      s.bridges ? ['Long notes held', `${s.held} of ${s.bridges}`] : null,
+      s.plugTries ? ['Plugs grabbed', `${s.plugs} of ${s.plugTries}`] : null,
+      s.rests ? ['Presses in rests', String(s.rests)] : null,
+      ['Falls', String(s.falls)],
+    ].filter(Boolean);
+    const lastBar = c.barLabel(c.lastBar), firstBar = this._range(c.firstBar, c.firstBar);
+    if (c.song) stats.unshift(['Bars', done ? `${this._range(c.firstBar, c.lastBar)}, all of them` : `${bar === firstBar ? bar : `${firstBar}–${bar}`} of ${lastBar}`]);
     this.app.ui.status('');
-    this.finish({
-      score: this.score,
-      passed: done && acc >= (this.embedded?.pass ?? 0.7),
-      accuracy: Math.round(acc * 100) / 100,
-      detail,
-      stats: [
-        ['Notes on the beat', `${s.onBeat} of ${s.notes}`],
-        ['Long notes held', `${s.held} of ${s.bridges}`],
-        ['Plugs grabbed', `${s.plugs} of ${s.plugTries}`],
-        ['Presses in rests', String(s.rests)],
-        ['Falls', String(s.falls)],
-      ],
-    });
+    this.statusShown = '';
+    this.finish({ score: this.score, passed: done && acc >= (this.embedded?.pass ?? 0.7), accuracy: Math.round(acc * 100) / 100, detail, stats });
+    // a song round that stopped part-way can carry on from the section it reached
+    const sec = c.sections[this.secIdx];
+    if (c.song && !done && !this.embedded && sec && (this.secIdx > 0 || sec.from !== 0)) {
+      this.app.ui.footEl?.append(h('button', { class: 'btn', onclick: () => { this.resumeBar = sec.from; this.begin(); } }, `Continue from bar ${this._range(sec.from, sec.from)}`));
+    }
+  }
+
+  /** The one thing to work on: the biggest group of one kind of slip on one note value, and where. */
+  _shakyTip() {
+    const groups = new Map();
+    for (const q of this.problems) {
+      const k = q.type === 'rest' ? 'rest' : `${q.type}|${q.v}`;
+      if (!groups.has(k)) groups.set(k, { type: q.type, v: q.v, bars: [] });
+      groups.get(k).bars.push(q.bar);
+    }
+    const order = ['short', 'missed', 'late', 'early', 'rest'];
+    const g = [...groups.values()].sort((a, b) => b.bars.length - a.bars.length || order.indexOf(a.type) - order.indexOf(b.type))[0];
+    if (!g) return '';
+    const where = barList(g.bars);
+    const what = {
+      short: [`held the ${g.v} short ${where}`, 'Count through each one and keep the key down right up to the next note.'],
+      missed: [`missed the ${g.v} ${where}`, 'Look a little ahead on the strip so each note is ready before it arrives.'],
+      late: [`came in late on the ${g.v} ${where}`, 'Have your finger ready before the click, then press with it.'],
+      early: [`rushed the ${g.v} ${where}`, 'Let each click land, then press with it.'],
+      rest: [`played during the rests ${where}`, 'A rest is a silent beat: count it with your hands still.'],
+    }[g.type];
+    return `Shakiest spot: you ${what[0]}. ${what[1]}`;
   }
 
   /** The results tip: the rhythm problem that came up most. */
   _tips(summary) {
+    if (this.tip) return this.tip;
     const counts = summary?.counts || {};
     const [top, n] = ['short', 'late', 'early', 'rest', 'missed'].map((k) => [k, counts[k] || 0]).sort((a, b) => b[1] - a[1])[0];
     if (!n) return '';
@@ -891,6 +1086,7 @@ export class Game extends ArcadeBase {
   }
 
   exit() {
+    for (const id of this.lit?.values() || []) clearTimeout(id);
     this.epoch = (this.epoch || 0) + 1;
     this._stopHum();
     this.mode = 'off';
@@ -904,7 +1100,7 @@ export class Game extends ArcadeBase {
   _build() {
     const st = this.stage;
     for (const k of ['bg', 'back', 'sprites', 'fx', 'hud']) st.layers[k].textContent = '';
-    this.hudG = null;
+    this.hudG = null; this.hudKey = null; this.fb = null;
     this._geometry();
     this._defs();
     this._backdrop();
@@ -929,7 +1125,9 @@ export class Game extends ArcadeBase {
     this.ceilY = Math.max(0.5 * u, 6);                 // the rail the plugs hang from
     this.lc = Math.max(3.6 * u, 4.4 * s);              // left column: fuel gauge above, clef below
     this.rx = this.lc + (W - this.lc) * 0.27;          // Roboman (and the blue line) stay here
-    this.ppb = clamp((W - this.rx) / 6, 3 * u, 7 * u); // pixels per beat
+    // pixels per beat: about six beats ahead, but never so tight that the closest notes collide
+    const room = (1.6 * s) / Math.max(0.25, this.course?.minIOI ?? 1);
+    this.ppb = Math.max(clamp((W - this.rx) / 6, 3 * u, 7 * u), Math.min(room, (W - this.rx) / 2.5));
     // Roboman and the plugs fill the height there is, but stay about a beat wide
     this.ru = clamp((this.floorY - this.ceilY) / 8.8, u, Math.min(1.45 * u, 0.43 * this.ppb));
     this.plugY = this.floorY - 5.75 * this.ru;         // top of a hanging plug
@@ -1068,12 +1266,25 @@ export class Game extends ArcadeBase {
     svg('rect', { x: x0, y: this.ceilY, width: x1 - x0, height: 0.62 * u, class: 'rb-rail' }, w);
     svg('line', { x1: x0, x2: x1, y1: this.ceilY + 0.31 * u, y2: this.ceilY + 0.31 * u, class: 'rb-rivets', 'stroke-dasharray': `0 ${1.1 * u}` }, w);
     for (let b = 0; b < c.bars; b++) {
-      const x = X(b * c.bpb), ty = this.ceilY + 0.62 * u;
+      const label = c.barMap[b] < 0 ? '' : c.barLabel(c.barMap[b]);
+      if (!label || label === '0') continue;
+      const x = X(b * c.bpb), ty = this.ceilY + 0.62 * u, tw = Math.max(1.1, 0.42 * label.length + 0.3) * u;
       svg('line', { x1: x, x2: x, y1: ty, y2: ty + 0.5 * u, class: 'rb-cable' }, w);
-      svg('rect', { x: x - 0.55 * u, y: ty + 0.5 * u, width: 1.1 * u, height: 0.85 * u, rx: 0.15 * u, class: 'rb-tag' }, w);
+      svg('rect', { x: x - tw / 2, y: ty + 0.5 * u, width: tw, height: 0.85 * u, rx: 0.15 * u, class: 'rb-tag' }, w);
       const t = svg('text', { x, y: ty + 1.17 * u, 'text-anchor': 'middle', 'font-size': 0.62 * u, class: 'rb-tag-text' }, w);
-      t.textContent = String(b + 1);
+      t.textContent = label;
     }
+    // song mode: the song's name on the wall at the door, and a checkpoint gate after each section
+    if (c.song) {
+      // high on the wall just ahead of where Roboman starts, over the count-in
+      const fs = clamp(0.8 * u, 11, 16), name = this._songName(), x = X(-c.countIn) + 1.7 * this.ru, y = this.ceilY + 2.3 * u;
+      const tw = name.length * fs * 0.56 + 1.2 * u;
+      svg('rect', { x, y, width: tw, height: fs * 1.9, rx: 6, class: 'rb-sign' }, w);
+      const t = svg('text', { x: x + tw / 2, y: y + fs * 1.28, 'text-anchor': 'middle', 'font-size': fs, class: 'rb-sign-text' }, w);
+      t.textContent = name;
+    }
+    this.gateEls = c.sections.slice(0, -1).map((sec, i) => this._gate(w, X(sec.cp), c.sections[i + 1]));
+    this.gateEls.forEach((el, i) => el.classList.toggle('on', i < this.secIdx));
     // walkway: solid stretches with pillars, and gaps where long notes are
     let at = -c.countIn - 12;
     const gaps = c.notes.filter((n) => n.kind === 'bridge');
@@ -1138,6 +1349,18 @@ export class Game extends ArcadeBase {
     return p;
   }
 
+  /** A checkpoint gate: an arch with the next section's bars on its sign; its lamp lights when passed. */
+  _gate(g, x, next) {
+    const u = this.ru, y = this.floorY, d = svg('g', { class: 'rb-gate' }, g);
+    svg('path', { d: `M${x - 1.75 * u},${y} V${y - 5.1 * u} M${x + 1.75 * u},${y} V${y - 5.1 * u}`, class: 'rb-gate-post' }, d);
+    svg('rect', { x: x - 2.05 * u, y: y - 5.95 * u, width: 4.1 * u, height: 0.95 * u, rx: 0.2 * u, class: 'rb-gate-sign' }, d);
+    const t = svg('text', { x: x + 0.25 * u, y: y - 5.28 * u, 'text-anchor': 'middle', 'font-size': 0.52 * u, class: 'rb-gate-text' }, d);
+    t.textContent = `BARS ${this._range(next.from, next.to)}`;
+    svg('circle', { cx: x - 1.6 * u, cy: y - 5.47 * u, r: 0.2 * u, class: 'rb-gate-lamp' }, d);
+    svg('rect', { x: x - 1.6 * u, y: y - 0.12 * u, width: 3.2 * u, height: 0.14 * u, rx: 0.06 * u, class: 'rb-dock-pad' }, d);
+    return d;
+  }
+
   _dock(g, x) {
     const u = this.ru, y = this.floorY;
     const d = svg('g', { class: 'rb-dock' }, g);
@@ -1161,16 +1384,35 @@ export class Game extends ArcadeBase {
       svg('line', { x1: X(b), x2: X(b), y1: y - 0.55 * s, y2: y + 0.55 * s, class: 'rb-tick' }, g);
       this._num(g, X(b), String((k % c.perBar) + 1), b, c.unit, 'rb-num rb-num-count');
     }
-    // bar lines sit just before the downbeat, clear of its notehead
+    // bar lines sit just before the downbeat, clear of its notehead; sections end with a double bar
+    const inPad = (b) => c.pads.some((p) => b >= p.t - eps && b < p.t + p.d - eps);
+    const ends = new Set(c.sections.slice(0, -1).map((sec) => Math.round(sec.end / c.bpb)));
     for (let b = 0; b < c.bars; b++) {
-      if (b) svg('line', { x1: X(b * c.bpb) - 1.05 * s, x2: X(b * c.bpb) - 1.05 * s, y1: y - 2 * s, y2: y + 2 * s, class: 'rb-barline' }, g);
-      for (let k = 0; k < c.perBar; k++) this._num(g, X(b * c.bpb + k * c.unit), String(k + 1), b * c.bpb + k * c.unit, c.unit, 'rb-num');
+      const bx = X(b * c.bpb) - 1.05 * s;
+      if (b) svg('line', { x1: bx, x2: bx, y1: y - 2 * s, y2: y + 2 * s, class: 'rb-barline' }, g);
+      if (ends.has(b)) svg('line', { x1: bx - 0.45 * s, x2: bx - 0.45 * s, y1: y - 2 * s, y2: y + 2 * s, class: 'rb-barline' }, g);
+      for (let k = 0; k < c.perBar; k++) {
+        const beat = b * c.bpb + k * c.unit;
+        if (!inPad(beat)) { this._num(g, X(beat), String(k + 1), beat, c.unit, 'rb-num'); continue; }
+        // counted, not played: a checkpoint bar, or the silent start of a pickup bar
+        svg('line', { x1: X(beat), x2: X(beat), y1: y - 0.55 * s, y2: y + 0.55 * s, class: 'rb-tick' }, g);
+        this._num(g, X(beat), String(k + 1), beat, c.unit, 'rb-num rb-num-count');
+      }
+    }
+    // song mode: each section's bars, written over the count that leads into it
+    if (c.song) {
+      c.sections.forEach((sec, i) => {
+        const x = X(i ? sec.start - c.bpb : -c.countIn) + 0.2 * s;
+        const t = svg('text', { x, y: this.stripTop + 1.35 * s, 'font-size': Math.max(9, 1.05 * s), class: 'rb-sec' }, g);
+        t.textContent = `Bars ${this._range(sec.from, sec.to)}${sec.again ? ' again' : ''}`;
+      });
     }
     const xe = X(c.length) - 0.5 * s;
     svg('line', { x1: xe - 0.65 * s, x2: xe - 0.65 * s, y1: y - 2 * s, y2: y + 2 * s, class: 'rb-barline' }, g);
     svg('rect', { x: xe - 0.4 * s, y: y - 2 * s, width: 0.4 * s, height: 4 * s, class: 'rb-final' }, g);
     // notes and rests, each right under its gap or plug
     c.tokens.forEach((tk) => {
+      if (tk.pad) return;
       const x = X(tk.t), [base, dots] = BASE[valueKey(tk.d)];
       const tg = tk.el = svg('g', { class: 'rb-tok' }, g);
       if (tk.rest) {
@@ -1189,7 +1431,7 @@ export class Game extends ArcadeBase {
       if (dots) glyph(tg, GL.dot, tk.hx + hw + 0.3 * s, y - 0.5 * s);
     });
     // in simple time, the off-beats get their "and"
-    if (c.unit === 1) for (const tk of c.tokens) if (Math.abs((tk.t % 1) - 0.5) < eps) this._num(g, X(tk.t), '+', tk.t, 0.5, 'rb-num rb-and');
+    if (c.unit === 1) for (const tk of c.tokens) if (!tk.pad && Math.abs((tk.t % 1) - 0.5) < eps) this._num(g, X(tk.t), '+', tk.t, 0.5, 'rb-num rb-and');
     // beams within each beat (dotted-quarter beat in 6/8), flags on lone eighths
     let grp = [];
     const flush = () => {
@@ -1350,22 +1592,33 @@ export class Game extends ArcadeBase {
     this.gaugeBox = { top, bot };
   }
 
+  /** The tray: score, bar, plugs and chances. Redrawn only when one of them changes. */
   _hud() {
     const st = this.stage, u = this.u;
+    const live = ['ready', 'run', 'fall', 'respawn', 'apart', 'done'].includes(this.mode);
+    const c = this.course, last = c.barLabel(c.barMap[c.bars - 1]);
+    const now = live ? this._barAt(Math.max(0, this.rob.beat)) : '';
+    // the status line always says something during a round, so the board never changes height under it
+    const sec = c.sections[this.secIdx];
+    const where = c.song && sec ? `Bars ${this._range(sec.from, sec.to)} · ` : '';
+    const status = live ? this.statusMsg || (this.fuel < 25 ? 'Fuel low: grab plugs, keep still in rests'
+      : `${where}${this.tempo} bpm${this.streak >= 4 ? ` · ${this.streak} in a row` : ''}`) : null;
+    if (status !== null && status !== this.statusShown) { this.statusShown = status; this.app.ui.status(status); }
+    const key = live ? `${this.score}|${now}|${this.plugs}|${this.chances}` : '';
+    if (this.hudG?.isConnected && key === this.hudKey) return;
+    this.hudKey = key;
     if (!this.hudG || !this.hudG.isConnected) this.hudG = svg('g', { class: 'ar-hudtext' }, st.layers.hud);
     const g = this.hudG;
     g.textContent = '';
-    if (!['ready', 'run', 'fall', 'respawn', 'apart', 'done'].includes(this.mode)) return;
-    const c = this.course, y = this.trayY, fs = clamp(u * 0.92, 11, 16);
+    if (!live) return;
+    const y = this.trayY, fs = clamp(u * 0.92, 11, 16);
     const label = (x, anchor, k, v) => {
       const t = svg('text', { x, y: y + fs * 0.35, 'text-anchor': anchor, 'font-size': fs, class: 'ar-hud' }, g);
       svg('tspan', { class: 'ar-hud-k' }, t).textContent = `${k} `;
       svg('tspan', { class: 'ar-hud-v' }, t).textContent = v;
     };
     label(st.left + 0.3 * u, 'start', 'SCORE', this.score.toLocaleString());
-    this.app.ui.status(this.statusMsg || (this.fuel < 25 ? 'Fuel low: grab plugs, and keep still in rests.' : this.streak >= 4 ? `${this.streak} in a row` : ''));
-    const bar = clamp(Math.floor(Math.max(0, this.rob.beat) / c.bpb + 1e-6) + 1, 1, c.bars);
-    label(st.w / 2, 'middle', 'BAR', `${bar}/${c.bars}`);
+    label(st.w / 2, 'middle', 'BAR', now === '0' ? 'pickup' : `${now}/${last}`);
     // chances: little robot heads, then the plug count
     const hw = fs * 1.05, gap = fs * 0.35;
     let x = st.right - 0.3 * u - hw;
@@ -1380,8 +1633,8 @@ export class Game extends ArcadeBase {
 
   _countFlash(n) {
     const st = this.stage, u = this.u;
-    // in the empty stretch ahead of Roboman: the first notes are a bar away
-    const x = Math.min(this.rx + 1.8 * this.ppb, (this.rx + st.w) / 2), y = this.ceilY + (this.floorY - this.ceilY) * 0.52;
+    // just ahead of Roboman, below the plugs and above the walkway
+    const x = this.rx + 1.35 * this.ru + 1.9 * u, y = this.floorY - 2.5 * this.ru;
     const t = svg('text', { x, y, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': 3.4 * u, class: 'rb-count' }, st.layers.hud);
     t.textContent = String(n);
     st.tween(Math.min(0.6, this.course.unit * this.spb * 0.95), (p) => {
@@ -1394,15 +1647,25 @@ export class Game extends ArcadeBase {
   _say(text, kind) {
     if (this.demo) return;
     const st = this.stage, u = this.u;
-    if (this.fb) { this.fb.tw.killed = true; this.fb.el.remove(); }
     const x = this.rx, y = this.plugY - 0.5 * this.ru;
-    const el = svg('text', { x, y, 'text-anchor': 'middle', 'font-size': clamp(1.25 * u, 14, 22), class: `rb-fb rb-fb-${kind}` }, st.layers.fx);
+    if (this.fb?.tw) this.fb.tw.killed = true;
+    if (!this.fb?.el.isConnected) this.fb = { el: svg('text', { x, 'text-anchor': 'middle', 'font-size': clamp(1.25 * u, 14, 22) }, st.layers.fx) };
+    const el = this.fb.el;
+    el.setAttribute('class', `rb-fb rb-fb-${kind}`);
     el.textContent = text;
-    const tw = st.tween(0.85, (p) => {
+    this.fb.tw = st.tween(0.85, (p) => {
       el.setAttribute('y', y - p * 1.6 * u);
       el.setAttribute('opacity', p < 0.6 ? 1 : 1 - (p - 0.6) / 0.4);
-    }, { ease: ease.out, done: () => { el.remove(); if (this.fb?.el === el) this.fb = null; } });
-    this.fb = { el, tw };
+    }, { ease: ease.out });
+  }
+
+  /** Light a key without the forced reflow of keyboard.flash (it runs on every press here). */
+  _light(midi, cls, ms = 320) {
+    const kb = this.app.keyboard;
+    kb.mark(midi, cls, true);
+    this.lit ||= new Map();
+    clearTimeout(this.lit.get(`${midi}${cls}`));
+    this.lit.set(`${midi}${cls}`, setTimeout(() => kb.mark(midi, cls, false), ms));
   }
 
   // ---------- effects ----------

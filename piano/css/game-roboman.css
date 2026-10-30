@@ -90,3 +90,13 @@
   .rb-gauge.low .rb-tube { animation: none; stroke: var(--coral); }
   .rb-spark { display: none; }
 }
+
+/* song mode: the song's name at the door, checkpoint gates, section labels on the strip */
+.rb-sign { fill: #16302a; stroke: rgba(217, 169, 58, 0.55); stroke-width: 1.2; }
+.rb-sign-text { fill: var(--brass); font-family: var(--sans); font-weight: 600; letter-spacing: 0.02em; }
+.rb-gate-post { fill: none; stroke: #7e978b; stroke-width: 3; stroke-linecap: round; }
+.rb-gate-sign { fill: #16302a; stroke: rgba(232, 237, 227, 0.3); stroke-width: 1; }
+.rb-gate-text { fill: var(--chalk); font-family: var(--sans); font-weight: 600; letter-spacing: 0.08em; }
+.rb-gate-lamp { fill: #4a5a53; transition: fill 0.2s; }
+.rb-gate.on .rb-gate-lamp { fill: var(--mint); }
+.rb-sec { fill: var(--brass); font-family: var(--sans); font-weight: 600; letter-spacing: 0.02em; }
