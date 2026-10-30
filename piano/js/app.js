@@ -30,7 +30,9 @@ class UI {
   status(text = '') { this.statusEl.textContent = text; }
   pips(n, i) {
     this.pipsEl.textContent = '';
-    this.pipsEl.setAttribute('aria-label', n ? `Step ${Math.min(i + 1, n)} of ${n}` : '');
+    // role="img" needs a name; with no steps to show, hide it from assistive tech instead
+    if (n) { this.pipsEl.setAttribute('aria-label', `Step ${Math.min(i + 1, n)} of ${n}`); this.pipsEl.removeAttribute('aria-hidden'); }
+    else { this.pipsEl.removeAttribute('aria-label'); this.pipsEl.setAttribute('aria-hidden', 'true'); }
     for (let k = 0; k < n; k++) this.pipsEl.append(h('span', { class: k < i ? 'done' : k === i ? 'now' : '' }));
   }
   big(main = '', sub = '', mode = '') {
