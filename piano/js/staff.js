@@ -336,9 +336,23 @@ export class Staff {
       if (m.hand === 'L' && this.staves === 'grand' && rh.has(`${m.t}|${m.dyn}`)) continue;
       const clef = this.clefFor({ hand: m.hand, midi: 60 });
       const top = clef === 'treble' ? this.tTop : this.bTop;
-      const y = top + 4 * sp + (clef === 'treble' ? (this.staves === 'grand' ? 2.6 : 3.0) : 4.6) * sp;
+      let y = top + 4 * sp + (clef === 'treble' ? (this.staves === 'grand' ? 2.6 : 3.0) : 4.6) * sp;
+      const x = m.t * ppb - 0.3 * sp;
+      // drop below any low notes of that hand under the mark, so the glyph never sits on a note head
+      let low = -Infinity;
+      for (const n of score.notes || []) {
+        if (n.hand !== m.hand) continue;
+        const nx = n.t * ppb;
+        if (nx < x - 0.8 * sp || nx > x + 2.6 * sp) continue;
+        low = Math.max(low, this.y(spell(n.midi, this.key, n.prefer).step, this.clefFor(n)));
+      }
+      const gap = /f/.test(m.dyn) ? 2.8 * sp : 2.0 * sp; // the f glyph rises well above its baseline
+      if (low + gap > y) {
+        y = low + gap;
+        if (clef === 'treble' && this.staves === 'grand') y = Math.min(y, this.bTop - 0.5 * sp);
+      }
       const glyph = GL.dyn[m.dyn];
-      if (glyph) this._glyph(this.gScroll, glyph, m.t * ppb - 0.3 * sp, y, 4 * sp, 'glyph dyn');
+      if (glyph) this._glyph(this.gScroll, glyph, x, y, 4 * sp, 'glyph dyn');
     }
   }
 

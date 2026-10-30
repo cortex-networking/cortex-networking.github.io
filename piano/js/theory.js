@@ -5,7 +5,7 @@ const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
 const SHARP_ORDER = [3, 0, 4, 1, 5, 2, 6]; // F C G D A E B (letter indices)
 const FLAT_ORDER = [6, 2, 5, 1, 4, 0, 3];  // B E A D G C F
 
-export const KEY_SIGS = { C: 0, G: 1, D: 2, A: 3, E: 4, F: -1, Bb: -2, Eb: -3, Am: 0, Em: 1, Dm: -1 };
+export const KEY_SIGS = { C: 0, G: 1, D: 2, A: 3, E: 4, F: -1, Bb: -2, Eb: -3, Am: 0, Em: 1, Dm: -1, Gm: -2, Cm: -3, Bm: 2 };
 
 export const DUR = { w: 4, h: 2, q: 1, e: 0.5, s: 0.25 };
 

@@ -15,7 +15,7 @@ Live at `/piano/`. Static files, no build step, no tracking, no accounts.
   octave, missed, early, late, hands, dynamics and so on). The coach tracks which ones keep
   coming back, writes short practice routines from the exact bars that went wrong, and puts
   the weakest skills on the home screen as "Today's practice".
-- **Songs**: 48 public-domain pieces with original arrangements, in collections (epic and dark,
+- **Songs**: 67 public-domain pieces with original arrangements, in collections (epic and dark,
   classical, folk, sea shanties, marches, game and film favorites, blues and rock, holiday).
   Wait mode, play-along (graded on timing), rhythm-only tapping and listen; right, left or
   both hands; the app can play the other hand. A backing band (bass, drums, pads, chords) is
