@@ -54,6 +54,75 @@ const glyph = (parent, ch, x, y, cls = 'glyph', size = 4) => txt(parent, ch, x, 
 const baseDur = (d) => (d >= 4 - 1e-6 ? 4 : d >= 2 - 1e-6 ? 2 : d >= 1 - 1e-6 ? 1 : 0.5);
 const isDotted = (d) => Math.abs(d - baseDur(d) * 1.5) < 1e-6;
 
+/**
+ * Draw a rhythm on a one-line staff (units: staff spaces). Stems up, eighths beamed by beat,
+ * ties, dots, rests, and counts ("1 + 2 +") under the line.
+ * o: { x0, ppb, y, len, bpb = 4, counts = true, countDy = 2.9 }
+ * Returns { root, notes: [{ e, g, x, xc }], counts: [{ t, el }] } with notes in event order.
+ */
+export function drawRhythm(parent, evs, o) {
+  const { x0, ppb, y } = o;
+  const bpb = o.bpb || 4;
+  const STEM = 3.3;
+  const root = s('g', { class: 'rh' }, parent);
+  const plainE = (e) => e && !e.rest && Math.abs(e.d - 0.5) < 1e-6;
+  const beamed = new Map();
+  for (let i = 0; i < evs.length - 1; i++) {
+    const a = evs[i], b = evs[i + 1];
+    if (plainE(a) && plainE(b) && Math.abs(a.t % 1) < 1e-6 && Math.abs(a.t + 0.5 - b.t) < 1e-6) { beamed.set(a, b); beamed.set(b, a); i++; }
+  }
+  const notes = [];
+  for (const e of evs) {
+    const x = x0 + e.t * ppb;
+    const g = s('g', { class: `rh-ev${e.rest ? ' rh-rest' : ''}` }, root);
+    const base = baseDur(e.d);
+    if (e.rest) {
+      glyph(g, G.rest[base], base === 4 ? x + Math.max(0, e.d * ppb / 2 - 1.2) : x, y);
+    } else {
+      const head = base === 4 ? G.whole : base === 2 ? G.half : G.black;
+      const hw = base === 4 ? 1.688 : 1.18;
+      glyph(g, head, x, y);
+      if (base < 4) {
+        const sx = x + hw - 0.06;
+        s('line', { class: 'rh-stem', x1: sx, x2: sx, y1: y - 0.17, y2: y - STEM }, g);
+        if (base < 1 && !beamed.has(e)) glyph(g, G.flag8, sx - 0.06, y - STEM);
+      }
+      if (isDotted(e.d)) glyph(g, G.dot, x + hw + 0.3, y - 0.5);
+    }
+    notes.push({ e, g, x, xc: x + 0.59 });
+  }
+  for (const [a, b] of beamed) {
+    if (b.t < a.t) continue;
+    const x1 = x0 + a.t * ppb + 1.06, x2 = x0 + b.t * ppb + 1.18;
+    s('polygon', { class: 'rh-beam', points: `${num(x1)},${num(y - STEM)} ${num(x2)},${num(y - STEM)} ${num(x2)},${num(y - STEM + 0.5)} ${num(x1)},${num(y - STEM + 0.5)}` }, root);
+  }
+  for (const e of evs) {
+    if (!e.tieTo) continue;
+    const hw = baseDur(e.d) === 4 ? 1.688 : 1.18;
+    const xs = x0 + e.t * ppb + hw + 0.12, xe = x0 + e.tieTo.t * ppb - 0.12;
+    const ys = y + 0.65, hg = Math.min(0.9, 0.3 + 0.04 * (xe - xs)), mx = (xs + xe) / 2;
+    s('path', { class: 'rh-tie', d: `M${num(xs)},${num(ys)} Q${num(mx)},${num(ys + hg * 2)} ${num(xe)},${num(ys)} Q${num(mx)},${num(ys + (hg - 0.22) * 2)} ${num(xs)},${num(ys)} Z` }, root);
+  }
+  const counts = [];
+  if (o.counts !== false) {
+    const len = o.len ?? Math.max(...evs.map((e) => e.t + e.d));
+    const starts = new Set(evs.filter((e) => !e.rest && !e.tiedFrom).map((e) => Math.round(e.t * 2)));
+    const cy = y + (o.countDy ?? 2.9);
+    const gC = s('g', { class: 'rh-counts' }, root);
+    for (let b = 0; b < len - 1e-6; b++) {
+      const on = starts.has(b * 2);
+      const rest = !on && evs.some((e) => e.rest && e.t <= b + 1e-6 && b < e.t + e.d - 1e-6);
+      counts.push({ t: b, el: txt(gC, String((b % bpb) + 1), x0 + b * ppb + 0.59, cy, `rh-count ${on ? 'on' : rest ? 'rest' : 'held'}`, o.countSize || 1.45) });
+    }
+    for (const e of evs) {
+      if (e.rest || e.tiedFrom || Math.abs((e.t % 1) - 0.5) > 1e-6) continue;
+      counts.push({ t: e.t, el: txt(gC, '+', x0 + e.t * ppb + 0.59, cy, 'rh-count on plus', o.countSize || 1.45) });
+    }
+    counts.sort((a, b) => a.t - b.t);
+  }
+  return { root, notes, counts };
+}
+
 const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];
 const LET = 'CDEFGAB';
 const IV = { M3: [4, 2], m3: [3, 2], P5: [7, 4], m7: [10, 6], R: [0, 0] };
@@ -73,6 +142,8 @@ function parseRoot(name) {
 const accName = (letter, alter) => LET[letter] + (alter > 0 ? '♯'.repeat(alter) : alter < 0 ? '♭'.repeat(-alter) : '');
 
 /** Build a chord: { sym, name, tones: [{name, role, pc}], voicing: [midi], bass, prefer, rootPos }. */
+const toneList = (c) => c.tones.map((t) => t.name).join(' ');
+
 export function makeChord(rootName, q, inversion = 0, opts = {}) {
   const r = parseRoot(rootName), Q = QUAL[q];
   const tones = Q.ivs.map((iv) => {

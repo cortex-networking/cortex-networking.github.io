@@ -1,0 +1,79 @@
+/* Ripchord (js/game-ripchord.js): helicopter, parachutists, chord cargo, timer. */
+
+/* sky and ground */
+.rc-cloud { fill: var(--chalk); opacity: 0.055; }
+.rc-ground { fill: rgba(0, 0, 0, 0.13); }
+.rc-ground-line { stroke: rgba(232, 237, 227, 0.3); stroke-width: 1.2; }
+.rc-grass { fill: none; stroke: rgba(232, 237, 227, 0.22); stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+.rc-pad { fill: var(--chalk); opacity: 0.88; }
+.rc-pad-ring { fill: var(--coral); }
+.rc-pole { stroke: var(--chalk-2); stroke-linecap: round; }
+.rc-sock-a { fill: var(--coral); }
+.rc-sock-b { fill: var(--chalk); }
+
+/* helicopter (unit art: strokes are in staff-space units) */
+.rc-body { fill: var(--brass); }
+.rc-body-dark { fill: #b4861f; }
+.rc-door-panel { fill: #c4972c; stroke: rgba(0, 0, 0, 0.18); stroke-width: 0.04; }
+.rc-stripe { fill: none; stroke: var(--coral); stroke-width: 0.13; }
+.rc-glass { fill: var(--lh); }
+.rc-glint { fill: none; stroke: rgba(255, 255, 255, 0.75); stroke-width: 0.08; stroke-linecap: round; }
+.rc-door { fill: #10221b; }
+.rc-mast { fill: #8b7a52; }
+.rc-strut { fill: none; stroke: var(--chalk-2); stroke-width: 0.12; stroke-linecap: round; stroke-linejoin: round; }
+.rc-winch { fill: #6f5a24; }
+.rc-disc { fill: var(--chalk); opacity: 0.1; }
+.rc-blade { fill: var(--chalk-2); }
+.rc-hub { fill: var(--chalk); }
+.rc-bridle { fill: none; stroke: var(--chalk-2); stroke-width: 0.045; }
+.rc-banner { fill: var(--chalk); stroke: rgba(0, 0, 0, 0.18); stroke-width: 0.03; }
+.rc-banner.is-answer { fill: var(--brass); }
+/* banner text and visors use a fixed dark ink: --ink turns light in dark mode */
+.rc-banner-text { font-family: var(--sans); font-weight: 700; fill: #1a1d1b; letter-spacing: 0.01em; }
+
+/* parachutists */
+.rc-suit { fill: var(--chalk); }
+.rc-limb { fill: none; stroke: var(--chalk-2); stroke-width: 0.17; stroke-linecap: round; }
+.rc-helmet { stroke: rgba(0, 0, 0, 0.2); stroke-width: 0.04; }
+.rc-visor { fill: #1a1d1b; opacity: 0.78; }
+.rc-lines { fill: none; stroke: rgba(232, 237, 227, 0.7); stroke-width: 0.045; }
+.rc-dome { stroke: rgba(0, 0, 0, 0.16); stroke-width: 0.04; }
+.rc-shine { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 0.09; stroke-linecap: round; }
+.rc-star { fill: var(--brass); }
+
+/* the chord cargo: tow rope, sling, noteheads */
+.rc-rope { stroke: var(--brass); stroke-linecap: round; }
+.rc-sling { fill: rgba(217, 169, 58, 0.07); stroke: rgba(217, 169, 58, 0.75); stroke-dasharray: 5 4; }
+.rc-shackle { fill: var(--felt); stroke: var(--brass); }
+.ar-glyph.rc-head { fill: var(--chalk); transition: fill 0.1s; }
+.ar-glyph.rc-head.is-held { fill: var(--mint); }
+.ar-glyph.rc-head.is-cue { fill: var(--brass); }
+.rc-halo { fill: var(--mint); opacity: 0; transition: opacity 0.1s; }
+.rc-halo.on { opacity: 0.2; }
+.rc-halo.cue { fill: var(--brass); opacity: 0.2; animation: rc-pulse 0.8s ease-in-out infinite alternate; }
+@keyframes rc-pulse { from { opacity: 0.06; } to { opacity: 0.3; } }
+.rc-dust { fill: var(--chalk-2); }
+.ar-glyph.rc-wrong { fill: var(--coral); }
+.ar-ledger.rc-wrong-ledger { stroke: var(--coral); }
+.rc-wrong-label { font-family: var(--sans); font-weight: 600; fill: var(--coral); paint-order: stroke; stroke: var(--felt); stroke-width: 3px; }
+.ar-glyph.rc-stale, .rc-wrong-label.rc-stale { opacity: 0.5; }
+
+/* answer callout and title card */
+.rc-callout-bg { fill: rgba(15, 31, 25, 0.86); stroke: rgba(232, 237, 227, 0.16); stroke-width: 1; }
+.rc-callout-name { font-family: var(--sans); font-weight: 600; fill: var(--chalk); }
+.rc-callout-notes { font-family: var(--sans); font-weight: 500; fill: var(--brass); letter-spacing: 0.06em; }
+.rc-title-k { font-family: var(--sans); font-weight: 600; fill: var(--brass); letter-spacing: 0.14em; }
+.rc-title-t { font-family: var(--sans); font-weight: 600; fill: var(--chalk); }
+.rc-float-time { fill: var(--mint); }
+
+/* countdown timer, upper right */
+.rc-timer-bg { fill: rgba(15, 31, 25, 0.7); stroke: rgba(232, 237, 227, 0.14); stroke-width: 1; }
+.rc-timer-track { fill: none; stroke: rgba(232, 237, 227, 0.14); }
+.rc-timer-arc { fill: none; stroke: var(--mint); stroke-linecap: round; transition: stroke 0.25s; }
+.rc-timer-arc.mid { stroke: var(--brass); }
+.rc-timer-arc.low { stroke: var(--coral); }
+.rc-timer-num { font-family: var(--sans); font-weight: 600; fill: var(--chalk); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rc-halo.cue { animation: none; }
+}

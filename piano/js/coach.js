@@ -66,6 +66,19 @@ function ducksStep(pool, text, extra = {}) {
   return { type: 'game', game: 'ducks', params: { pool, staves, count: 8, throws: 3, speed: 0.8, ...extra }, pass: 0.75, text };
 }
 
+/** The distinct chords (two or more notes struck together) in one hand of a passage. */
+function chordsOf(score, hand) {
+  const byT = new Map();
+  for (const n of score.notes || []) if ((n.hand || 'R') === hand) (byT.get(n.t) || byT.set(n.t, []).get(n.t)).push(n.midi);
+  const seen = new Set(), out = [];
+  for (const ms of byT.values()) {
+    if (ms.length < 2) continue;
+    const k = [...ms].sort((a, b) => a - b).join(',');
+    if (!seen.has(k)) { seen.add(k); out.push(k.split(',').map(Number)); }
+  }
+  return out;
+}
+
 /** Single-line phrase (top note of each right-hand chord, bottom of each left-hand one) for Aliens!. */
 function phraseOf(score, hand) {
   const byT = new Map();
@@ -240,6 +253,10 @@ export class Coach {
       case 'neighbor': case 'missed': case 'chord': {
         if (usable) {
           steps.push({ type: 'seq', score: passage, staves, text: `Slowly, ${where} only. Look at each note before you play it, and use the finger numbers.` });
+          if (cat === 'chord') {
+            const chords = chordsOf(passage, hands === 'L' ? 'L' : 'R');
+            if (chords.length) steps.push({ type: 'game', game: 'ripchord', params: { chords, count: Math.min(8, Math.max(4, chords.length * 2)), time: 9, names: true }, pass: 0.7, text: `Ripchord: the chords from ${where}. Hold every note of each chord down together.` });
+          }
           if (cat === 'neighbor') {
             const phrase = phraseOf(passage, hands === 'L' ? 'L' : 'R');
             if (phrase.length >= 3) steps.push({ type: 'game', game: 'aliens', params: { phrases: [phrase], count: 1, reps: 3 }, pass: 0.7, text: `Aliens! They play ${where}; copy them with the right fingers.` });

@@ -7,7 +7,7 @@
 .ar-glyph { font-family: 'MC Notation'; fill: var(--chalk); }
 .ar-clef { fill: var(--chalk); }
 .ar-float { font-family: var(--sans); font-weight: 600; fill: var(--brass); paint-order: stroke; stroke: var(--felt); stroke-width: 3px; }
-.ar-splat-label { font-family: var(--sans); font-weight: 600; fill: var(--ink); }
+.ar-splat-label { font-family: var(--sans); font-weight: 600; fill: #1a1d1b; }
 .ar-tray { stroke: rgba(232, 237, 227, 0.14); stroke-width: 1; stroke-dasharray: 2 6; }
 .ar-hud { font-family: var(--sans); font-variant-numeric: tabular-nums; }
 .ar-hud-k { fill: var(--chalk-2); font-weight: 600; letter-spacing: 0.14em; font-size: 0.78em; }

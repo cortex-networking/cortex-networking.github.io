@@ -1017,6 +1017,7 @@ export const LESSONS = [
     staves: 'grand',
     steps: [
       { type: 'say', text: 'By the end of this review you’ll be able to name and play major, minor and power chords, and play a melody over a power-chord bass with both hands.' },
+      { type: 'game', game: 'ripchord', params: { chords: ['C', 'Am', 'F', 'G', 'Dm', 'Em', 'A5', 'E5'], count: 8, time: 10, names: false }, pass: 0.6, text: 'Ripchord: major, minor and power chords. The name only shows after you play, so read the notes.' },
       {
         type: 'quiz', text: 'Chord review.',
         items: [

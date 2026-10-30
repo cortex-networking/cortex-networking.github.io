@@ -10,6 +10,20 @@
 .rh-bar { stroke: var(--chalk-3); stroke-width: 0.16; }
 .rh-bar-end { fill: var(--chalk-3); }
 .rh-clef { fill: var(--chalk-2); }
+.rh-ev { color: var(--chalk); transition: color 0.12s; }
+.rh-ev .glyph { fill: currentColor; }
+.rh-stem { stroke: currentColor; stroke-width: 0.12; }
+.rh-rest { color: var(--chalk-2); }
+.rh-beam { fill: var(--chalk); }
+.rh-tie { fill: var(--chalk); }
+.rh-ev.next { color: var(--brass); }
+.rh-ev.hit, .rh-ev.ok { color: var(--mint); }
+.rh-ev.miss { color: var(--coral); }
+.rh-count { font-family: var(--sans); font-weight: 500; fill: var(--chalk-2); text-anchor: middle; font-variant-numeric: tabular-nums; }
+.rh-count.on { fill: var(--chalk); font-weight: 600; }
+.rh-count.held, .rh-count.rest { fill: var(--chalk-3); }
+.rh-count.now { fill: var(--brass); }
+.rh-count.miss { fill: var(--coral); }
 /* ---------- quiz ---------- */
 .qz-host { position: absolute; inset: 0; container-type: size; }
 .qz {
@@ -103,5 +117,5 @@
   .qz-choice { padding: 6px 8px 6px 6px; gap: 8px; font-size: 14.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .qz-choice { transition: none; }
+  .rh-ev, .qz-choice { transition: none; }
 }

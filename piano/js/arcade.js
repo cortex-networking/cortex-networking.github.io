@@ -80,7 +80,7 @@ export class Stage {
     const o = this.opts;
     const block = (o.staves === 'grand' ? 8 + GAP : 4) + o.mTop + o.mBot;
     const top = hgt * o.padTop, bot = hgt * (1 - o.padBot);
-    this.sp = clamp(Math.min((bot - top) / block, w / 30), 6, o.maxSp);
+    this.sp = clamp(Math.min((bot - top) / block, w / (o.wDiv || 30)), 6, o.maxSp);
     const sp = this.sp;
     const used = block * sp;
     const y0 = top + Math.max(0, (bot - top - used) / 2) + o.mTop * sp;
@@ -161,8 +161,8 @@ export class Stage {
   }
 
   /** A plain notehead with ledgers and accidental, for previews and labels. */
-  note(parent, x, midi, { prefer, cls = '', head = GLYPH.black } = {}) {
-    const p = this.place(midi, prefer);
+  note(parent, x, midi, { prefer, cls = '', head = GLYPH.black, clef } = {}) {
+    const p = this.place(midi, prefer, clef || this.clefOf(midi));
     const g = svg('g', { class: `ar-note ${cls}` }, parent);
     this.ledgers(g, x + 0.59 * this.sp, p.step, p.clef);
     if (p.acc !== null && p.acc !== undefined) this.glyph(g, GLYPH.acc[String(p.acc)], x - 1.1 * this.sp, p.y);
@@ -177,6 +177,9 @@ export class Stage {
     if (delay <= 0) fn(e(0));
     return tw;
   }
+
+  /** Drop every running tween (between rounds). */
+  clearTweens() { this.tweens = []; }
 
   update(dt) {
     if (!this.tweens.length) return;
@@ -508,6 +511,7 @@ export class ArcadeBase extends GameBase {
   }
 
   begin() {
+    this.stage.clearTweens();
     this.stage.hidePanel();
     this.stage.configure(this.stageOptions());
     this.reset?.();
@@ -570,7 +574,18 @@ export class ArcadeBase extends GameBase {
   noteOff() {}
   pedal() {}
 
+  /** setTimeout that is cleared automatically when the game exits. */
+  after(sec, fn) {
+    this._timers ||= new Set();
+    const id = setTimeout(() => { this._timers.delete(id); fn(); }, sec * 1000);
+    this._timers.add(id);
+    return id;
+  }
+
+  clearTimers() { for (const id of this._timers || []) clearTimeout(id); this._timers?.clear(); }
+
   exit() {
+    this.clearTimers();
     super.exit();
     this.sfx.stopAll();
     this.stage?.destroy();
